@@ -1,0 +1,195 @@
+---
+description: README style for script/module documentation (e.g. README_scriptname.md)
+globs: ["**/README_*.md"]
+alwaysApply: false
+---
+
+# My README Style (Script Documentation)
+
+> Use this style when writing READMEs that document a **single script or module** (e.g. `README_geographic_attention.md`). This rule applies to script-level docs only; it does not replace folder-navigation README rules.
+
+---
+
+## Target Audience
+
+- Readers who want to **run** the script, **understand** what it does, or **modify** it (e.g. change parameters, date ranges, API keys).
+- Assume some familiarity with the command line and with concepts like APIs and `.env`; explain acronyms on first use and break complex steps into lists.
+- Write with **clarity and patience**; state facts directly without filler.
+
+---
+
+## Structure and Format
+
+### Headers
+
+| Level | Use for | Example |
+|-------|---------|--------|
+| **H1** | Title + em dash; no emoji | `# Geographic Attention Map — Script Documentation` |
+| **H2** | Main sections | Overview, API Endpoint and Parameters, Data Structure, Usage Instructions |
+| **H3** | Subsections | Parameters used by the script, Prerequisites, Setup, Running the script |
+
+- Use **horizontal rules** (`---`) between major H2 sections for visual separation.
+- **Icons in headings**: Optional. If you use them, keep them light (e.g. 🔧 for Setup, 💡 for tips); plain headings are fine for a technical script doc.
+
+### Suggested Section Order
+
+1. **Title (H1)** — One-line description that names the script file.
+2. **Overview** — What the script does, what it uses (API/service), and purpose; optional **Purpose:** line.
+3. **API Endpoint and Parameters** — Base URL, endpoint, method; parameter table; example request if useful.
+4. **Data Structure** — API response and/or script output (tables + short bullets).
+5. **Flow diagram (Mermaid)** — Optional; use when the script has an API or multi-step flow.
+6. **Usage Instructions** — Prerequisites, Setup (numbered steps + code blocks), Running the script, What you’ll see; end with a note on customization if relevant.
+
+This order keeps *what it is* → *what it uses* → *what it returns* → *how to run it*.
+
+---
+
+## Formatting Guidelines
+
+- **Use formatting frequently**: **bold** for key terms, file names, and important concepts; *italics* for subtle emphasis or alternative phrasing.
+- **Inline code**: Use backticks for file names (`script.py`), env vars (`GUARDIAN_API_KEY`), commands (`pip install`), and field/parameter names (`response.total`, `q`).
+- **File references**:
+  - **Same-folder script**: Backticks are enough — e.g. "Documentation for `04_geographic_attention.py`: ...".
+  - **Other files**: Prefer a link — e.g. See [`other_file.py`](other_file.py) for helpers.
+  - **External**: Use `[link text](url)` for API docs, signup pages, etc.
+
+---
+
+## Writing Style
+
+### Tone and Voice
+
+- **Concise**: Get to the point; avoid unnecessary words.
+- **Humble**: Don’t assume expertise; explain steps and context when helpful.
+- **Direct**: State what the script does and how to use it; avoid filler.
+
+**Never use phrases like:**
+
+- "it is obvious" / "obviously"
+- "it is critical" / "clearly"
+- "as you can see" / "it goes without saying"
+
+**Instead**, state facts directly:
+
+- ✅ "This step configures the API endpoint."
+- ❌ "It is critical that you configure the API endpoint."
+
+### Clarity
+
+- **Acronyms**: Explain on first use — e.g. "REST API (Representational State Transfer)."
+- **Steps**: Break into numbered or bulleted lists; add a short *why* when it helps.
+- **Language**: Prefer simple, direct wording; define jargon inline when needed.
+
+---
+
+## Code Blocks and Tables
+
+### Code Blocks
+
+- **Language**: Use `bash` for shell commands, `mermaid` for diagrams, or no language for generic request/response examples.
+- **Placement**: Put the block right after the sentence that introduces it (e.g. "**Example request:**" then the block). For numbered steps, put the block under the step.
+- **Content**: Prefer **runnable**, copy-paste friendly examples. Add a one-line explanation after the block if there are placeholders (e.g. "Replace `YOUR_KEY` with your actual key.").
+- **Reference**: When showing a snippet from the script, mention the file above or below the block.
+
+### Tables
+
+Use tables for:
+
+- **API summary** — e.g. Item | Value (Base URL, Endpoint, Method).
+- **Parameters** — Parameter | Required | Description.
+- **Data structure** — Field | Type | Description.
+
+In cells, use backticks for parameter names, types, and field names (e.g. `q`, `string`, `response.total`).
+
+---
+
+## Diagrams (Mermaid)
+
+- Use **Mermaid** when it clarifies the script (e.g. flowchart of steps, sequence diagram for script ↔ API).
+- Put each diagram in a fenced block with the `mermaid` language.
+- Add a short **label** above the block (e.g. "**Sequence view (script ↔ API):**") so the reader knows what they’re looking at.
+- Use standard syntax (`flowchart LR`/`TB`, `sequenceDiagram`) so it renders in GitHub and other viewers.
+
+---
+
+## Lists
+
+- **Bullet lists**: For features, options, or non-sequential items. Use **bold** for labels (e.g. "**Purpose:** ...", "**Top level:** ...").
+- **Numbered lists**: For setup and usage steps (1. Install … 2. Create … 3. Run …).
+- **Checkboxes**: Use `- [ ]` for optional or actionable items when relevant (e.g. in a short "Before you run" list).
+
+---
+
+## Examples
+
+### Good title and opening
+
+```markdown
+# Geographic Attention Map — Script Documentation
+
+Documentation for `04_geographic_attention.py`: a script that measures which countries receive the most news coverage in The Guardian over a 30-day window.
+```
+
+### Good formatting in prose
+
+```markdown
+**Purpose:** Support reporting or analysis on where Guardian coverage is focused.
+
+Set your API key in the `.env` file before running the script.
+```
+
+### Avoid this
+
+```markdown
+It is critical that you understand the API endpoint. Obviously, you will need to set your key.
+```
+
+### Use this instead
+
+```markdown
+Configure the API endpoint in the script or via environment variables. Add `GUARDIAN_API_KEY=your_key` to your `.env` file.
+```
+
+### Good usage section structure
+
+```markdown
+## Usage Instructions
+
+### Prerequisites
+
+- **Python 3** with `requests` and `python-dotenv`
+- A Guardian API key from [The Guardian Open Platform](https://open-platform.theguardian.com/access/)
+
+### Setup
+
+1. **Install dependencies** (if needed):
+
+   ```bash
+   pip install requests python-dotenv
+   ```
+
+2. **Create a `.env` file** with `GUARDIAN_API_KEY=your_key_here`.
+
+### Running the script
+
+```bash
+python 04_geographic_attention.py
+```
+```
+
+---
+
+## Checklist for Script READMEs
+
+When creating or editing a script README (`README_*.md`), ensure:
+
+- [ ] **H1** includes a short title with em dash and names the script file in the opening line.
+- [ ] **Overview** explains what the script does, what it uses (API/service), and purpose.
+- [ ] **API/Parameters** use a table; optional example request with a code block.
+- [ ] **Data structure** is described with tables and/or short bullets (API response and/or script output).
+- [ ] **Usage** has Prerequisites, Setup (numbered steps + code blocks), and "Running the script"; optional "What you’ll see" or troubleshooting.
+- [ ] **Formatting**: Bold and inline code used for key terms, file names, and commands.
+- [ ] **Tone**: Direct and concise; no "obviously", "clearly", "it is critical".
+- [ ] **File references**: Script name in backticks; other files linked when relevant; external links for APIs/docs.
+- [ ] **Code blocks**: Language set where helpful (`bash`, `mermaid`); blocks are runnable or clearly illustrative.
+- [ ] **Mermaid** (if used): Label above the block; standard syntax for portability.

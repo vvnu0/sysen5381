@@ -32,7 +32,7 @@ url = f"{OLLAMA_HOST}/api/generate"
 # Build the request body as a dictionary
 # This tells Ollama which model to use and what prompt to send
 body = {
-    "model": "smollm2:1.7b",  # Model name
+    "model": "gemma3:latest",  # Model name
     "prompt": "Is model working?",  # User prompt
     "stream": False  # Non-streaming response
 }
@@ -51,6 +51,9 @@ response_data = response.json()
 
 # Extract the model's reply as a string
 # The response structure contains the generated text
+if "response" not in response_data:
+    print("Error from Ollama:", json.dumps(response_data, indent=2))
+    exit(1)
 output = response_data["response"]
 
 # Print the model's reply

@@ -41,9 +41,25 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# Send POST request to OpenAI API
-response = requests.post(url, headers=headers, json=body)
-response.raise_for_status()
+# Send POST request to OpenAI API (with retry for rate limits)
+max_retries = 3
+for attempt in range(max_retries):
+    response = requests.post(url, headers=headers, json=body)
+    if response.status_code == 429:
+        error_info = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+        error_msg = error_info.get("error", {}).get("message", "Rate limited by OpenAI.")
+        print(f"  Rate limited (attempt {attempt + 1}/{max_retries}): {error_msg}")
+        if attempt < max_retries - 1:
+            wait = 2 ** (attempt + 1)
+            print(f"  Retrying in {wait}s...")
+            time.sleep(wait)
+        else:
+            print("\n  All retries exhausted. Check your OpenAI account quota/billing at:")
+            print("  https://platform.openai.com/settings/organization/billing/overview")
+            exit(1)
+    else:
+        response.raise_for_status()
+        break
 
 # Parse the response JSON
 result = response.json()

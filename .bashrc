@@ -16,11 +16,12 @@ alias Rscript='/c/Program Files/R/R-4.4.1/bin/Rscript.exe'
 # Add R libraries to your path for this project (here's mine)
 export R_LIBS_USER="/c/Users/tmf77/AppData/Local/R/win-library/4.2"
 
-# Add Python to your Path for this project (here's mine)
-export PATH="$PATH:/c/Python312"
-alias python='/c/Python312/python.exe'
+# Add Python to your Path for this project (detected on this machine)
+# Points to Anaconda installation
+export PATH="$PATH:/c/ProgramData/Anaconda3"
+alias python='/c/ProgramData/Anaconda3/python.exe'
 
-# Add uvicorn to your Path for this project - if using Python for APIs (here's mine)
-export PATH="$PATH:/c/Users/tmf77/AppData/Roaming/Python/Python312/Scripts"
+# Add Python Scripts (pip/uvicorn/console_scripts) for project
+export PATH="$PATH:/c/ProgramData/Anaconda3/Scripts"
 
 echo "✅ Local .bashrc loaded."
