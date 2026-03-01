@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - '04_deployment/app**'
-      - '.github/workflows/deploy-posit.yml'
+      - '.github/workflows/deploy-app.yml'
   workflow_dispatch:
 
 jobs:
