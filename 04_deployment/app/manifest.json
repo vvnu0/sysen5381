@@ -15,19 +15,16 @@
   },
   "files": {
     "requirements.txt": {
-      "checksum": "7541cc32fadd5026b397956216f75194"
+      "checksum": "74a7e43e2e8504b49ed0264a697f7057"
     },
     "README.md": {
-      "checksum": "799c2b24ab59988a536462568e4a2093"
+      "checksum": "d7cb1bbb9908d584d6a2a7429071df40"
     },
     "app.py": {
-      "checksum": "a3b74af8faf56b8f21f403f1fb19e392"
+      "checksum": "e47b491f1642d047b4b608376b1fdf60"
     },
     "manifestme.sh": {
-      "checksum": "a6beb3a807c0584240caab6f54792792"
-    },
-    "testme.sh": {
-      "checksum": "aa09ab7dc5f7775f2b1d6038cf24283f"
+      "checksum": "07b5def597660febf7226fa9873954f9"
     }
   }
 }
