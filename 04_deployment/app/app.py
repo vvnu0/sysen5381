@@ -31,7 +31,7 @@ from shiny.express import input, ui
 
 # Load .env from project root (three levels up from this app)
 env_path = Path(__file__).resolve().parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+_dotenv_loaded = load_dotenv(dotenv_path=env_path)
 GUARDIAN_API_KEY = os.getenv("GUARDIAN_API_KEY")
 
 ## 0.3 Ollama Cloud Configuration ################
@@ -518,8 +518,8 @@ with ui.sidebar(open="desktop", width=300):
     
     ui.hr()
     ui.markdown(
-        "<small style='color: #86868B;'>Data: [The Guardian](https://open-platform.theguardian.com/) "
-        " &middot; AI: [Ollama](https://ollama.ai/)</small>"
+        "*Data: [The Guardian](https://open-platform.theguardian.com/) | "
+        "AI: [Ollama](https://ollama.ai/)*"
     )
 
 # 4. Reactive Data — Fetch & Process ###############
@@ -836,12 +836,7 @@ with ui.layout_columns(col_widths=[5, 7]):
                 color_discrete_map=TOPIC_COLORS,
                 hole=0.4,
             )
-            fig.update_layout(
-                margin=dict(l=0, r=0, t=10, b=0),
-                height=300,
-                font=dict(family="Inter, -apple-system, sans-serif", color="#1D1D1F"),
-                paper_bgcolor="rgba(0,0,0,0)",
-            )
+            fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=300)
             return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     
     with ui.card():
