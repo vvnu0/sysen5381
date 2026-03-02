@@ -1,3 +1,5 @@
+Uses local ollama
+
 # app.py
 # Integrated AI-Powered Geographic Attention Reporter
 # Combines Guardian API, Shiny Dashboard, and Ollama AI Insights
@@ -34,11 +36,11 @@ env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 GUARDIAN_API_KEY = os.getenv("GUARDIAN_API_KEY")
 
-## 0.3 Ollama Cloud Configuration ################
+## 0.3 Ollama Configuration ######################
 
-OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
-OLLAMA_URL = "https://ollama.com/api/chat"
-OLLAMA_MODEL = "gpt-oss:20b-cloud"
+OLLAMA_PORT = 11434
+OLLAMA_URL = f"http://localhost:{OLLAMA_PORT}/api/generate"
+OLLAMA_MODEL = "gemma3:latest"
 
 ## 0.4 Constants #################################
 
@@ -207,10 +209,7 @@ KEY OBSERVATIONS:
 
 
 def query_ollama(data_text):
-    """Send data to Ollama Cloud and return AI-generated analysis."""
-    
-    if not OLLAMA_API_KEY:
-        return "Error: OLLAMA_API_KEY not found in .env file. Please set it up first."
+    """Send data to Ollama and return AI-generated analysis."""
     
     prompt = f"""ROLE: You are a media analyst specializing in global news coverage patterns.
 
@@ -249,31 +248,24 @@ OUTPUT FORMAT:
 [1-2 sentences on what this means for journalists, researchers, or readers]
 """
     
-    body = {
-        "model": OLLAMA_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
-    }
-    
-    headers = {
-        "Authorization": f"Bearer {OLLAMA_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    
     try:
-        response = requests.post(OLLAMA_URL, headers=headers, json=body, timeout=120)
+        response = requests.post(
+            OLLAMA_URL,
+            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            timeout=120,
+        )
         
         if response.status_code != 200:
-            return f"Error: Ollama Cloud returned status {response.status_code}. Check your API key and quota."
+            return f"Error: Ollama returned status {response.status_code}. Make sure Ollama is running."
         
         result = response.json()
-        if "message" not in result or "content" not in result["message"]:
-            return "Error: Unexpected response format from Ollama Cloud."
+        if "response" not in result:
+            return "Error: Unexpected response format from Ollama."
         
-        return result["message"]["content"]
+        return result["response"]
     
     except requests.exceptions.ConnectionError:
-        return "Error: Could not connect to Ollama Cloud. Check your network connection."
+        return "Error: Could not connect to Ollama. Make sure it is running with `ollama serve`."
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -688,7 +680,7 @@ with ui.card(full_screen=True):
                     class_="text-muted"
                 ),
                 ui.p(
-                    "Requirements: OLLAMA_API_KEY must be set in your .env file.",
+                    "Requirements: Ollama must be running locally with the gemma3 model.",
                     class_="text-muted small"
                 ),
                 class_="p-4"
