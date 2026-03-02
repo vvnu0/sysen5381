@@ -75,9 +75,9 @@ TOPIC_MAP = {
 
 # Color palette for topics
 TOPIC_COLORS = {
-    "Politics": "#636EFA", "Culture": "#EF553B", "Crisis": "#FFA15A",
-    "Sport": "#00CC96", "Business": "#AB63FA", "Science": "#19D3F3",
-    "Other": "#B6B6B6",
+    "Politics": "#007AFF", "Culture": "#FF3B30", "Crisis": "#FF9500",
+    "Sport": "#34C759", "Business": "#AF52DE", "Science": "#5AC8FA",
+    "Other": "#8E8E93",
 }
 
 
@@ -283,9 +283,186 @@ OUTPUT FORMAT:
 # Set page title (compatible with older Shiny versions)
 ui.tags.title("Geographic Attention Reporter")
 
+# Apple-inspired design system
+ui.tags.style("""
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+        --apple-blue: #007AFF;
+        --apple-green: #34C759;
+        --apple-orange: #FF9500;
+        --apple-gray: #8E8E93;
+        --apple-bg: #F5F5F7;
+        --apple-card: #FFFFFF;
+        --apple-text: #1D1D1F;
+        --apple-text-secondary: #86868B;
+        --apple-border: rgba(0,0,0,0.04);
+        --apple-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+        --apple-shadow-hover: 0 4px 14px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+        --apple-radius: 14px;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+                     'Segoe UI', sans-serif !important;
+        background-color: var(--apple-bg) !important;
+        color: var(--apple-text) !important;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Sidebar */
+    .bslib-sidebar-layout > .sidebar {
+        background: var(--apple-card) !important;
+        border-right: 1px solid var(--apple-border) !important;
+        box-shadow: 1px 0 8px rgba(0,0,0,0.03) !important;
+    }
+    .sidebar h4 {
+        font-weight: 600 !important;
+        font-size: 1.1rem !important;
+        letter-spacing: -0.01em !important;
+        color: var(--apple-text) !important;
+    }
+    .sidebar hr {
+        border-color: rgba(0,0,0,0.06) !important;
+        margin: 1rem 0 !important;
+    }
+    .sidebar label {
+        font-weight: 500 !important;
+        font-size: 0.8rem !important;
+        color: var(--apple-text-secondary) !important;
+        letter-spacing: 0.03em !important;
+        text-transform: uppercase !important;
+    }
+    .sidebar .form-check-label {
+        text-transform: none !important;
+        font-weight: 400 !important;
+        font-size: 0.9rem !important;
+        color: var(--apple-text) !important;
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: var(--apple-blue) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 10px 20px !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: -0.01em !important;
+    }
+    .btn-primary:hover {
+        background: #0066D6 !important;
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0,122,255,0.3) !important;
+    }
+    .btn-success {
+        background: linear-gradient(135deg, #34C759, #30B350) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 10px 20px !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: -0.01em !important;
+    }
+    .btn-success:hover {
+        background: linear-gradient(135deg, #30B350, #28A745) !important;
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(52,199,89,0.3) !important;
+    }
+
+    /* Cards */
+    .card {
+        border: 1px solid var(--apple-border) !important;
+        border-radius: var(--apple-radius) !important;
+        box-shadow: var(--apple-shadow) !important;
+        transition: box-shadow 0.3s ease !important;
+        overflow: hidden !important;
+        background: var(--apple-card) !important;
+    }
+    .card:hover {
+        box-shadow: var(--apple-shadow-hover) !important;
+    }
+    .card-header {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(0,0,0,0.04) !important;
+        font-weight: 600 !important;
+        font-size: 0.92rem !important;
+        color: var(--apple-text) !important;
+        padding: 16px 20px !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    /* Value Boxes */
+    .bslib-value-box {
+        border-radius: var(--apple-radius) !important;
+        border: none !important;
+        box-shadow: var(--apple-shadow) !important;
+        overflow: hidden !important;
+    }
+    .bslib-value-box .value-box-title {
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        opacity: 0.85;
+    }
+    .bslib-value-box .value-box-value {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.02em !important;
+    }
+    .bg-primary {
+        background: linear-gradient(135deg, #007AFF, #5856D6) !important;
+    }
+    .bg-info {
+        background: linear-gradient(135deg, #5AC8FA, #007AFF) !important;
+    }
+    .bg-success {
+        background: linear-gradient(135deg, #34C759, #30D158) !important;
+    }
+
+    /* Form inputs */
+    .form-control, .form-select {
+        border-radius: 8px !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        font-size: 0.9rem !important;
+        padding: 8px 12px !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: var(--apple-blue) !important;
+        box-shadow: 0 0 0 3px rgba(0,122,255,0.15) !important;
+    }
+    .form-check-input:checked {
+        background-color: var(--apple-blue) !important;
+        border-color: var(--apple-blue) !important;
+    }
+
+    /* Alert boxes */
+    .alert {
+        border-radius: 10px !important;
+        border: none !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Main content area */
+    .bslib-sidebar-layout > .main {
+        background-color: var(--apple-bg) !important;
+        padding: 1.25rem !important;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+""")
+
 # 3. Sidebar — Input Controls ######################
 
-with ui.sidebar(open="desktop", width=320):
+with ui.sidebar(open="desktop", width=300):
     ui.h4("Query Parameters")
     ui.hr()
     
@@ -341,8 +518,8 @@ with ui.sidebar(open="desktop", width=320):
     
     ui.hr()
     ui.markdown(
-        "*Data: [The Guardian](https://open-platform.theguardian.com/) | "
-        "AI: [Ollama](https://ollama.ai/)*"
+        "<small style='color: #86868B;'>Data: [The Guardian](https://open-platform.theguardian.com/) "
+        " &middot; AI: [Ollama](https://ollama.ai/)</small>"
     )
 
 # 4. Reactive Data — Fetch & Process ###############
@@ -536,18 +713,21 @@ with ui.layout_columns(col_widths=[6, 6]):
                 orientation="h",
                 labels={"total_articles": "Total Articles", "country": ""},
                 color="total_articles",
-                color_continuous_scale="Blues",
+                color_continuous_scale=[[0, "#E8F0FE"], [1, "#007AFF"]],
             )
             fig.update_layout(
                 margin=dict(l=0, r=20, t=10, b=0),
                 showlegend=False,
                 coloraxis_showscale=False,
                 height=300,
+                font=dict(family="Inter, -apple-system, sans-serif", color="#1D1D1F"),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
             )
             return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     
     with ui.card():
-        ui.card_header("Coverage Per Capita (Articles per 1M Population)")
+        ui.card_header("Coverage Per Capita (per 1M Population)")
         
         @render.ui
         def per_capita_chart():
@@ -563,13 +743,16 @@ with ui.layout_columns(col_widths=[6, 6]):
                 orientation="h",
                 labels={"articles_per_1m": "Articles per 1M People", "country": ""},
                 color="articles_per_1m",
-                color_continuous_scale="Greens",
+                color_continuous_scale=[[0, "#E8F8ED"], [1, "#34C759"]],
             )
             fig.update_layout(
                 margin=dict(l=0, r=20, t=10, b=0),
                 showlegend=False,
                 coloraxis_showscale=False,
                 height=300,
+                font=dict(family="Inter, -apple-system, sans-serif", color="#1D1D1F"),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
             )
             return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
 
@@ -605,6 +788,9 @@ with ui.layout_columns(col_widths=[6, 6]):
                 margin=dict(l=0, r=20, t=10, b=0),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
                 height=300,
+                font=dict(family="Inter, -apple-system, sans-serif", color="#1D1D1F"),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
             )
             return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     
@@ -650,7 +836,12 @@ with ui.layout_columns(col_widths=[5, 7]):
                 color_discrete_map=TOPIC_COLORS,
                 hole=0.4,
             )
-            fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=300)
+            fig.update_layout(
+                margin=dict(l=0, r=0, t=10, b=0),
+                height=300,
+                font=dict(family="Inter, -apple-system, sans-serif", color="#1D1D1F"),
+                paper_bgcolor="rgba(0,0,0,0)",
+            )
             return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
     
     with ui.card():
@@ -686,10 +877,6 @@ with ui.card(full_screen=True):
                 ui.p(
                     "Click 'Generate AI Report' in the sidebar to create an AI-powered analysis.",
                     class_="text-muted"
-                ),
-                ui.p(
-                    "Requirements: OLLAMA_API_KEY must be set in your .env file.",
-                    class_="text-muted small"
                 ),
                 class_="p-4"
             )
