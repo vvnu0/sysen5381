@@ -451,6 +451,7 @@ ui.tags.style("""
     .bslib-sidebar-layout > .main {
         background-color: var(--apple-bg) !important;
         padding: 1.25rem !important;
+        padding-top: 2.5rem !important;
     }
 
     /* Scrollbar */
