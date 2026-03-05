@@ -68,7 +68,8 @@ stat = data.groupby("generic_name").apply(lambda x: x.loc[x["update_date"].idxma
 
 # data
 
-# NOTE: The API data in 'data' changes over time,
+# NOTE: The API data in 'data' chang
+# es over time,
 # so sometimes if you filter to availability == "Unavailable",
 # there literally may be no rows with that trait.
 # If that's the case, the 'stat' table will be empty.
