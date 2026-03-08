@@ -1,0 +1,12 @@
+{
+    "https://connect.systems-apps.com": {
+        "server_url": "https://connect.systems-apps.com",
+        "filename": "C:\\Users\\nairv\\Downloads\\classes\\dsai\\05_hackathon\\dashboard",
+        "app_url": "https://connect.systems-apps.com/content/ab8b214a-3e9b-46e2-8089-42f451732155/",
+        "app_id": "118",
+        "app_guid": "ab8b214a-3e9b-46e2-8089-42f451732155",
+        "title": "City Congestion Tracker",
+        "app_mode": "python-streamlit",
+        "app_store_version": 1
+    }
+}

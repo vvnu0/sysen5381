@@ -9,6 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").rstrip("/")
+CONNECT_API_KEY = os.getenv("CONNECT_API_KEY", "")
+
+_headers: dict[str, str] = {}
+if CONNECT_API_KEY:
+    _headers["Authorization"] = f"Key {CONNECT_API_KEY}"
 
 st.set_page_config(
     page_title="City Congestion Tracker",
@@ -22,14 +27,14 @@ st.caption("Explore current congestion, historical trends, typical daily pattern
 
 def api_get(path: str, params: dict[str, Any] | None = None, timeout: int = 30):
     url = f"{API_URL}{path}"
-    r = requests.get(url, params=params, timeout=timeout)
+    r = requests.get(url, params=params, headers=_headers, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
 
 def api_post(path: str, payload: dict[str, Any], timeout: int = 90):
     url = f"{API_URL}{path}"
-    r = requests.post(url, json=payload, timeout=timeout)
+    r = requests.post(url, json=payload, headers=_headers, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
@@ -184,13 +189,29 @@ with tab1:
     st.subheader("Worst congestion right now")
 
     try:
-        cur_rows = get_current(current_minutes, 50)
+        cur_resp = get_current(current_minutes, 50)
+        if isinstance(cur_resp, dict) and "rows" in cur_resp:
+            cur_rows = cur_resp["rows"]
+            cur_stale = cur_resp.get("stale", False)
+            cur_data_as_of = cur_resp.get("data_as_of")
+        else:
+            cur_rows = cur_resp
+            cur_stale = False
+            cur_data_as_of = None
         cur_df = to_df(cur_rows)
     except Exception as e:
         st.error(f"Failed to load current congestion data: {e}")
         cur_df = pd.DataFrame()
+        cur_stale = False
+        cur_data_as_of = None
 
     if not cur_df.empty:
+        if cur_stale:
+            st.warning(
+                f"No live data in the last {current_minutes} minutes. "
+                f"Showing the most recent available data (as of {cur_data_as_of})."
+            )
+
         if scope_mode == "Area" and selected_area:
             cur_df = cur_df[cur_df["area"] == selected_area].copy()
         elif scope_mode == "Single location" and selected_scope_location_id is not None:
@@ -331,6 +352,11 @@ with tab4:
     if not cmp:
         st.warning("Comparison data could not be loaded.")
     else:
+        if cmp.get("stale"):
+            st.warning(
+                f"No live data in the last {compare_window_hours} hour(s). "
+                "Showing comparison using the most recent available data."
+            )
         overall = cmp.get("overall", {}) or {}
         by_loc = to_df(cmp.get("by_location", []))
         rises = to_df(cmp.get("biggest_rises", []))

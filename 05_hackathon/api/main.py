@@ -10,11 +10,22 @@ from sqlalchemy import create_engine, text
 
 load_dotenv()
 
-db_url = os.getenv("DATABASE_URL", "")
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+_engine = None
 
-engine = create_engine(db_url, pool_pre_ping=True)
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        db_url = os.getenv("DATABASE_URL", "")
+        if not db_url:
+            raise HTTPException(
+                status_code=503,
+                detail="DATABASE_URL is not configured. Set it in Posit Connect Settings > Vars.",
+            )
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+        _engine = create_engine(db_url, pool_pre_ping=True)
+    return _engine
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "https://ollama.com/api/chat")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b-cloud")
@@ -102,9 +113,32 @@ def get_current_stats(
         order by avg_congestion desc, l.name
     """)
 
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         rows = conn.execute(q, params).mappings().all()
-    return rows_to_dicts(rows)
+
+    if rows:
+        return rows_to_dicts(rows), False
+
+    q_fallback = text(f"""
+        select
+            l.id as location_id,
+            l.name,
+            l.area,
+            round(avg(r.congestion_level)::numeric, 1) as avg_congestion,
+            round(avg(r.avg_speed_mph)::numeric, 1) as avg_speed_mph,
+            round(avg(r.delay_seconds)::numeric, 1) as avg_delay_seconds,
+            count(*) as sample_count
+        from public.congestion_readings r
+        join public.locations l on l.id = r.location_id
+        where r.ts >= (select max(ts) from public.congestion_readings) - (:window_hours * interval '1 hour')
+        {extra_sql}
+        group by l.id, l.name, l.area
+        order by avg_congestion desc, l.name
+    """)
+
+    with get_engine().connect() as conn:
+        rows = conn.execute(q_fallback, params).mappings().all()
+    return rows_to_dicts(rows), True
 
 
 def hours_in_window(window_hours: int) -> list[int]:
@@ -155,7 +189,7 @@ def get_baseline_stats(
         order by baseline_congestion desc, l.name
     """)
 
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         rows = conn.execute(q, params).mappings().all()
     return rows_to_dicts(rows)
 
@@ -167,7 +201,7 @@ def build_compare_payload(
     location_ids: list[int] | None = None,
     area: str | None = None,
 ):
-    cur = get_current_stats(window_hours, location_id, location_ids, area)
+    cur, stale = get_current_stats(window_hours, location_id, location_ids, area)
     base = get_baseline_stats(window_hours, baseline_days, location_id, location_ids, area)
 
     base_map = {row["location_id"]: row for row in base}
@@ -221,6 +255,7 @@ def build_compare_payload(
     return {
         "window_hours": window_hours,
         "baseline_days": baseline_days,
+        "stale": stale,
         "overall": {
             "current_avg_congestion": cur_overall,
             "historical_avg_congestion": hist_overall,
@@ -270,7 +305,7 @@ def get_locations():
         from public.locations
         order by name
     """)
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         rows = conn.execute(q).mappings().all()
     return rows_to_dicts(rows)
 
@@ -295,9 +330,38 @@ def get_current(
         order by avg_congestion desc
         limit :limit
     """)
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         rows = conn.execute(q, {"minutes": minutes, "limit": limit}).mappings().all()
-    return rows_to_dicts(rows)
+
+    if rows:
+        return {"rows": rows_to_dicts(rows), "stale": False, "data_as_of": None}
+
+    q_fallback = text("""
+        select
+            l.id as location_id,
+            l.name,
+            l.area,
+            round(avg(r.congestion_level)::numeric, 1) as avg_congestion,
+            round(avg(r.avg_speed_mph)::numeric, 1) as avg_speed_mph,
+            round(avg(r.delay_seconds)::numeric, 1) as avg_delay_seconds
+        from public.congestion_readings r
+        join public.locations l on l.id = r.location_id
+        where r.ts >= (select max(ts) from public.congestion_readings) - (:minutes * interval '1 minute')
+        group by l.id, l.name, l.area
+        order by avg_congestion desc
+        limit :limit
+    """)
+    q_latest = text("select max(ts) as latest_ts from public.congestion_readings")
+    with get_engine().connect() as conn:
+        latest_row = conn.execute(q_latest).mappings().first()
+        latest_ts = latest_row["latest_ts"] if latest_row else None
+        rows = conn.execute(q_fallback, {"minutes": minutes, "limit": limit}).mappings().all()
+
+    return {
+        "rows": rows_to_dicts(rows),
+        "stale": True,
+        "data_as_of": str(latest_ts) if latest_ts else None,
+    }
 
 
 @app.get("/congestion/history")
@@ -312,7 +376,7 @@ def get_history(
           and ts >= now() - (:hours * interval '1 hour')
         order by ts
     """)
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         rows = conn.execute(q, {"location_id": location_id, "hours": hours}).mappings().all()
     return rows_to_dicts(rows)
 
@@ -341,7 +405,7 @@ def get_pattern(
         order by hour
     """)
 
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         rows = conn.execute(q, params).mappings().all()
     return rows_to_dicts(rows)
 
