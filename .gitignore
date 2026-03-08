@@ -1,5 +1,7 @@
 .env
 .DS_Store
+.venv
+**/.venv/
 **/__pycache__
 **/_pycache_
 docs/.prep/.canvas
