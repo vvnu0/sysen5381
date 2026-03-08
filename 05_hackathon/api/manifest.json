@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "locale": "English_United States.1252",
+  "metadata": {
+    "appmode": "python-api",
+    "entrypoint": "main:app"
+  },
+  "python": {
+    "version": "3.12.7",
+    "package_manager": {
+      "name": "pip",
+      "version": "25.0",
+      "package_file": "requirements.txt"
+    }
+  },
+  "files": {
+    "requirements.txt": {
+      "checksum": "da913c5a75037bb1575934e0e521bc69"
+    },
+    ".example.env": {
+      "checksum": "00dafc94b0081f091c8b943f513bd216"
+    },
+    "main.py": {
+      "checksum": "2c3ba2e416d393e0b8595c95389c219e"
+    },
+    "manifestme.sh": {
+      "checksum": "9c4b07d79a82eea1c2870865966b7c28"
+    },
+    "pushme.sh": {
+      "checksum": "8022a894d7fcf2839f18a1d30bb9f21c"
+    }
+  }
+}

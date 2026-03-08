@@ -8,18 +8,75 @@ Reference: [Deploy a Streamlit Application to Connect Cloud](https://docs.posit.
 
 ---
 
-## Prerequisites
+## Why do I need FastAPI?
+
+Your app is designed so that:
+
+- **Only the API** talks to Supabase (database) and to Ollama (AI).  
+- **The dashboard** only calls the API over HTTP.
+
+So the dashboard cannot work without a running API: it needs an `API_URL` to fetch locations, congestion data, and AI summaries. Deploying the FastAPI app gives you that URL. You can deploy the API to **Posit Connect** (self-hosted, same as the course example in `04_deployment/positconnect/fastapi`) or to another host (Render, Railway, etc.); then point the Streamlit app’s `API_URL` at it.
+
+---
+
+## A. Deploy the FastAPI API (so the dashboard has something to call)
+
+You can deploy the API to **Posit Connect** (self-hosted) using the same pattern as the course example in `04_deployment/positconnect/fastapi`.
+
+### A.1 One-time setup
+
+1. **Install rsconnect-python:**  
+   `pip install rsconnect-python`
+
+2. **Create `api/.env`** (do not commit it). Copy from `api/.example.env` and set:
+   - `CONNECT_SERVER` — your Posit Connect URL (e.g. `https://connect.systems-apps.com`)
+   - `CONNECT_API_KEY` — API key from Connect (Account → API Keys)
+   - Optionally for local runs: `DATABASE_URL`, `OLLAMA_API_KEY`, etc.
+
+3. **Set environment variables for the API on Posit Connect** (after first deploy):  
+   In Connect, open the deployed API → **Settings** / **Environment** and add:
+   - `DATABASE_URL` — Supabase Postgres connection string  
+   - `OLLAMA_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL` (if you use AI summaries)
+
+### A.2 Generate manifest and deploy
+
+From the **repository root** (e.g. `dsai` or `05_hackathon`):
+
+```bash
+# Generate manifest (run once, or when you add/remove files)
+./api/manifestme.sh
+
+# Deploy the API to Posit Connect
+./api/pushme.sh
+```
+
+Or from the `api/` directory (if your shell supports it):
+
+```bash
+cd 05_hackathon/api
+./manifestme.sh
+./pushme.sh
+```
+
+**Important:** `pushme.sh` sources `api/.env` for `CONNECT_SERVER` and `CONNECT_API_KEY`. On Windows you can run the same commands via Git Bash, or run the equivalent `rsconnect` commands in PowerShell (see [rsconnect-python deploy](https://docs.posit.co/rsconnect-python/commands/deploy/)).
+
+### A.3 Get the API URL
+
+After a successful deploy, Posit Connect shows the content URL, e.g.  
+`https://connect.systems-apps.com/content/39634566-78b0-4f98-a7cd-956a18a7e0fd/`
+
+Use that as **`API_URL`** (no trailing slash) when deploying the Streamlit app or in the dashboard’s environment.
+
+---
+
+## B. Deploy the Streamlit dashboard (Connect Cloud)
+
+---
+
+## Prerequisites (for the dashboard)
 
 1. **FastAPI backend deployed and reachable**  
-   The dashboard needs a public `API_URL`. Deploy the `api/` (FastAPI) app to a host such as:
-   - [Render](https://render.com/) (Web Service)
-   - [Railway](https://railway.app/)
-   - [Fly.io](https://fly.io/)
-   - Another cloud that gives you a public HTTPS URL
-
-   On that host, set:
-   - `DATABASE_URL` (Supabase Postgres)
-   - `OLLAMA_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL` (if you use AI summaries)
+   Complete **Section A** above to deploy the API to Posit Connect, or deploy `api/` to another host (Render, Railway, Fly.io). You need a public **`API_URL`** for the dashboard. On the host, set `DATABASE_URL`, and if you use AI summaries: `OLLAMA_API_KEY`, `OLLAMA_URL`, `OLLAMA_MODEL`.
 
 2. **GitHub account** and a **public** repository containing this project (or at least the Streamlit app and `requirements.txt`).
 
@@ -27,7 +84,7 @@ Reference: [Deploy a Streamlit Application to Connect Cloud](https://docs.posit.
 
 ---
 
-## 1. Prepare the repo
+## 1. Prepare the repo (for Streamlit)
 
 - Ensure the dashboard and its dependencies are in the repo:
   - **Primary file:** `dashboard/app.py` (or `05_hackathon/dashboard/app.py` if the repo root is the whole course repo).
@@ -87,9 +144,9 @@ After you change the dashboard or `requirements.txt`:
 
 | Item              | Value / action |
 |-------------------|----------------|
-| **What runs on Connect** | Streamlit dashboard only |
-| **Primary file**  | `dashboard/app.py` (or `05_hackathon/dashboard/app.py`) |
-| **Required env**  | `API_URL` = public FastAPI base URL |
-| **Requirements**  | `requirements.txt` in repo root or next to `app.py` |
+| **Why FastAPI?**  | Dashboard only talks to the API; the API talks to Supabase and Ollama. You need the API running to get a working dashboard. |
+| **API deploy**    | Section A: use `api/manifestme.sh` and `api/pushme.sh` (same pattern as `04_deployment/positconnect/fastapi`). |
+| **Dashboard (Connect Cloud)** | Streamlit only; primary file `dashboard/app.py`; set `API_URL` to your deployed API URL. |
+| **Requirements**  | `requirements.txt` in repo root or next to `app.py` (dashboard); `api/requirements.txt` for the API. |
 
 The dashboard will call `API_URL` for `/health`, `/locations`, `/congestion/*`, and `/summary`. Ensure the FastAPI app is deployed and has access to Supabase and (optionally) Ollama. The dashboard uses server-side requests, so CORS is not required unless you add browser-based API calls later.
