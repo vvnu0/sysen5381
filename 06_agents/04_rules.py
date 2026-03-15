@@ -134,5 +134,5 @@ print("=== Agent 2 Result (Analysis with Rules) ===")
 print(result2)
 print()
 
-print("=== Agent 3 Result (Press Release with Rules) ===")
+print("\n\n\n=== Agent 3 Result (Press Release with Rules) ===")
 print(result3)
