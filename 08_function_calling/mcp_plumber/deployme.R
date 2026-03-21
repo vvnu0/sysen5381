@@ -1,6 +1,6 @@
-# 06_deploy_mcp.R
+# deployme.R
 # Deploy the MCP Server to Posit Connect (R)
-# Pairs with 06_deploy_mcp.py
+# Pairs with mcp_fastapi/deployme.py
 # Tim Fraser
 
 # This script deploys plumber.R to Posit Connect as a Plumber API.
@@ -29,11 +29,7 @@ rsconnect::addServer(
 
 # 2. DEPLOY ################################################################
 
-rsconnect::writeManifest(
-  appDir = "08_function_calling/mcp_plumber",
-  appMode = "api", appPrimaryDoc = "plumber.R"
-)
-
+if(!file.exists("manifest.json")) { rsconnect::writeManifest(appDir = "08_function_calling/mcp_plumber", appMode = "api", appPrimaryDoc = "plumber.R") }
 # deployAPI() packages plumber.R and pushes it to Connect.
 # appName becomes part of the URL path.
 

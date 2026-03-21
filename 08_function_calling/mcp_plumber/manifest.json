@@ -1497,10 +1497,10 @@
   },
   "files": {
     "deployme.R": {
-      "checksum": "c047be2394f1afb2b930079e2ac3b906"
+      "checksum": "982bb38b9231a129a694649c1d8ee027"
     },
     "plumber.R": {
-      "checksum": "834d180fcd63c3cea8b37d36006e20a7"
+      "checksum": "c722919362a6b782f9900e6589ce58ed"
     },
     "README.md": {
       "checksum": "bd0ca53cab67ddc86bd324cfdb5f2a98"
