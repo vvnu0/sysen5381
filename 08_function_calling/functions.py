@@ -13,6 +13,7 @@ import requests  # for HTTP requests
 import json      # for working with JSON
 import pandas as pd  # for data manipulation
 import sys       # for stack frame inspection
+import time      # for simple polling/retry
 
 # If you haven't already, install these packages...
 # pip install requests pandas
@@ -25,6 +26,29 @@ PORT = 11434
 OLLAMA_HOST = f"http://localhost:{PORT}"
 CHAT_URL = f"{OLLAMA_HOST}/api/chat"
 REQUEST_TIMEOUT = 300  # seconds; avoid hanging indefinitely on network/model issues
+OLLAMA_TAGS_URL = f"{OLLAMA_HOST}/api/tags"
+
+
+def ensure_ollama_available(max_wait_seconds: int = 15, poll_interval_seconds: float = 0.5) -> None:
+    """
+    Fail fast with a helpful message if Ollama isn't reachable.
+    """
+    deadline = time.time() + max_wait_seconds
+    last_err = None
+    while time.time() < deadline:
+        try:
+            r = requests.get(OLLAMA_TAGS_URL, timeout=5)
+            if r.ok:
+                return
+        except Exception as e:
+            last_err = e
+        time.sleep(poll_interval_seconds)
+
+    raise RuntimeError(
+        "Ollama is not reachable at localhost:11434. "
+        "Start it first with: `python 08_function_calling/01_ollama.py`.\n"
+        f"Last error: {last_err}"
+    )
 
 # 1. AGENT FUNCTION ###################################
 
@@ -54,10 +78,13 @@ def agent(messages, model=DEFAULT_MODEL, output="text", tools=None, all=False):
     
     # If the agent has NO tools, perform a standard chat
     if tools is None:
+        ensure_ollama_available()
         body = {
             "model": model,
             "messages": messages,
-            "stream": False
+            "stream": False,
+            # Token cap makes runtime more predictable for students' machines.
+            "options": {"num_predict": 500},
         }
         
         response = requests.post(CHAT_URL, json=body, timeout=REQUEST_TIMEOUT)
@@ -67,11 +94,13 @@ def agent(messages, model=DEFAULT_MODEL, output="text", tools=None, all=False):
         return result["message"]["content"]
     else:
         # If the agent has tools, perform a tool call
+        ensure_ollama_available()
         body = {
             "model": model,
             "messages": messages,
             "tools": tools,
-            "stream": False
+            "stream": False,
+            "options": {"num_predict": 500},
         }
         
         response = requests.post(CHAT_URL, json=body, timeout=REQUEST_TIMEOUT)
