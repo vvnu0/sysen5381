@@ -9,3 +9,13 @@ docs/.prep/.canvas
 08_function_calling/mcp_plumber/rsconnect/
 08_function_calling/mcp_fastapi/rsconnect/
 08_function_calling/mcp_fastapi/rsconnect-python/
+**/rsconnect/
+**/**/rsconnect/
+# Local Pi model config may contain pasted API keys — never commit
+10_data_management/pi/models.json
+node_modules/
+10_data_management/pi/.env
+10_data_management/agent/.env
+10_data_management/agent/logs/*
+!10_data_management/agent/logs/.gitkeep
+z/
