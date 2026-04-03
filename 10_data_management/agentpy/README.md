@@ -1,6 +1,6 @@
 ![Banner Image](../docs/images/icons.png)
 
-# README `10_data_management/agent`
+# README `10_data_management/agentpy`
 
 > A **disaster situational brief agent**: a bounded **FastAPI** + **Ollama** loop for **coordination / resilience** roles—morning-style snapshots of a **user-specified ongoing disaster** and **follow-ups** (neighborhoods, time windows, lifelines). Uses **`AGENT.md`**, **`skills/`**, optional **web search** (Serper), and **plain HTTP JSON**—no Slack or Telegram required. **Not** a substitute for official ICS or field reporting.
 

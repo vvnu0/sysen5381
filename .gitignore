@@ -15,7 +15,10 @@ docs/.prep/.canvas
 10_data_management/pi/models.json
 node_modules/
 10_data_management/pi/.env
-10_data_management/agent/.env
-10_data_management/agent/logs/*
-!10_data_management/agent/logs/.gitkeep
+10_data_management/agentpy/.env
+10_data_management/agentpy/logs/*
+!10_data_management/agentpy/logs/.gitkeep
+10_data_management/agentr/.env
+10_data_management/agentr/logs/*
+!10_data_management/agentr/logs/.gitkeep
 z/

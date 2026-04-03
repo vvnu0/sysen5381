@@ -1,8 +1,8 @@
 #!/bin/bash
 # manifestme.sh
 # Write manifest.json for Posit Connect deployment of this FastAPI app.
-# Run from anywhere: bash 10_data_management/agent/manifestme.sh
-# Or: cd 10_data_management/agent && ./manifestme.sh
+# Run from anywhere: bash 10_data_management/agentpy/manifestme.sh
+# Or: cd 10_data_management/agentpy && ./manifestme.sh
 
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"

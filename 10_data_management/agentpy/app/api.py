@@ -387,5 +387,5 @@ async def hooks_agent(body: AgentBodyDep) -> JSONResponse:
     return JSONResponse(payload, status_code=code)
 
 
-# Run locally (from the agent/ folder):
+# Run locally (from the agentpy/ folder):
 #   python -m uvicorn app.api:app --host 0.0.0.0 --port 8000

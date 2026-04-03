@@ -2,7 +2,7 @@
 # deployme.sh
 # Deploy this folder to Posit Connect via rsconnect-python.
 # Prerequisites: .env in this folder with CONNECT_SERVER and CONNECT_API_KEY (see .env.example).
-# Run from anywhere: bash 10_data_management/agent/deployme.sh
+# Run from anywhere: bash 10_data_management/agentpy/deployme.sh
 
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
