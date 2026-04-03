@@ -43,11 +43,12 @@
         }
         .card {
             background: white;
-            border-left: 5px solid #b31b1b;
             border-radius: 8px;
-            overflow: hidden; /* Ensures the header background respects border radius */
+            overflow: hidden; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: transform 0.2s ease;
+            display: flex;
+            flex-direction: column;
         }
         .card:hover {
             transform: translateY(-5px);
@@ -61,7 +62,7 @@
         }
         .card-header h3 {
             margin: 0;
-            color: white; /* White text for header */
+            color: white; 
             font-size: 1.4rem;
             letter-spacing: 0.5px;
             flex-grow: 1;
@@ -71,6 +72,7 @@
         }
         .card-body {
             padding: 24px;
+            flex-grow: 1;
         }
         .description {
             font-size: 1rem;
@@ -97,8 +99,10 @@
 
     <header>
         <h1>LLM Actions Cheatsheet</h1>
-
-        
+        <div class="credits">
+            <strong>Author:</strong> Tim Fraser, Systems Engineering<br>
+            <a href="mailto:tmf77@cornell.edu">tmf77@cornell.edu</a>
+        </div>
     </header>
 
     <div class="container">
@@ -122,6 +126,17 @@
             <div class="card-body">
                 <p class="description">Judging and scoring input against a rubric, logic gates, or specific criteria.</p>
                 <p class="example">Examples: Grading essays, checking code for security flaws, compliance auditing.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">✍️</span>
+                <h3>EDIT</h3>
+            </div>
+            <div class="card-body">
+                <p class="description">Modifying existing content to improve quality, fix errors, or meet new constraints.</p>
+                <p class="example">Examples: Grammar correction, rewriting for clarity, updating stale documentation.</p>
             </div>
         </div>
 
@@ -176,15 +191,16 @@
             </div>
             <div class="card-body">
                 <p class="description">Modeling a persona, system, or scenario to predict or practice reactions.</p>
-                <p class="example">Examples: Roleplaying difficult conversations, "What would X think?", persona testing.</p>
+                <p class="example">Examples: Roleplaying difficult conversations, persona testing, scenario modeling.</p>
             </div>
         </div>
 
     </div>
 
     <footer>
-        &copy; 2026 Tim Fraser. Prepared for class SYSEN 5381 Data Science and AI for Systems Engineering.
+        &copy; 2026 Tim Fraser. Prepared for Systems Engineering students.
     </footer>
 
 </body>
 </html>
+
