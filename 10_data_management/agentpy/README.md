@@ -144,18 +144,16 @@ For local-only development without a cloud key, point **`OLLAMA_HOST`** at **`ht
 
 ## Activities
 
-Complete these activities in order:
+Module activities live in the parent **[`10_data_management/`](../)** folder and cover **either** Python (**this folder**) or R (**[`agentr/`](../agentr/)**). Complete in order:
 
-1. [ACTIVITY: Run the Autonomous Agent Locally](ACTIVITY_agent_local.md)
+1. [ACTIVITY: Run the Autonomous Agent Locally](../ACTIVITY_agent_local.md) — **Python track:** use the files below; **R track:** see **[`agentr/README.md`](../agentr/README.md)**.
    - [`app/api.py`](app/api.py) — FastAPI entrypoint
    - [`app/loop.py`](app/loop.py) — bounded situational brief loop (Ollama + tools)
    - [`app/guardrails.py`](app/guardrails.py) — turn cap and path rules
    - [`requirements.txt`](requirements.txt) — dependencies
    - [`.env.example`](.env.example) — environment template
    - [`runme.sh`](runme.sh) — local server
-2. [ACTIVITY: Deploy the Autonomous Agent (FastAPI)](ACTIVITY_agent_deploy.md)
-   - [`manifestme.sh`](manifestme.sh), [`deployme.sh`](deployme.sh) — Connect bundle + deploy
-   - [`testme.py`](testme.py) — smoke test against **`AGENT_PUBLIC_URL`**
+2. [ACTIVITY: Deploy the Autonomous Agent](../ACTIVITY_agent_deploy.md) — **Python track:** [`manifestme.sh`](manifestme.sh), [`deployme.sh`](deployme.sh), [`testme.py`](testme.py); **R track:** [`agentr/deployme.R`](../agentr/deployme.R), [`agentr/testme.R`](../agentr/testme.R) from repo root (see **[`agentr/README.md`](../agentr/README.md)**).
 
 ---
 

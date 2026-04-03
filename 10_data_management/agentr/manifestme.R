@@ -1,24 +1,16 @@
 # manifestme.R
-# Write manifest.json for Posit Connect (Plumber API + Python deps for reticulate)
+
+# Optional script to create a manifest file for deployment to Posit Connect
+# (same idea as 04_deployment/positconnect/plumber/manifestme.R; includes Python env for reticulate).
 # Tim Fraser
 #
-# From repo root: Rscript 10_data_management/agentr/manifestme.R
-# Or: cd 10_data_management/agentr && Rscript manifestme.R
+# Run from the repository root (getwd() = dsai).
+#
+# install.packages("rsconnect")
 
-args = commandArgs(trailingOnly = FALSE)
-f = sub("^--file=", "", args[grepl("^--file=", args)])[1]
-if (!is.na(f) && nzchar(f)) {
-  setwd(dirname(normalizePath(f, winslash = "/", mustWork = FALSE)))
-}
-
-if (!requireNamespace("rsconnect", quietly = TRUE)) {
-  stop("install.packages('rsconnect')")
-}
-
-here = normalizePath(getwd(), winslash = "/", mustWork = FALSE)
 rsconnect::writeManifest(
-  appDir = here,
-  appPrimaryDoc = "plumber.R",
+  appDir = "10_data_management/agentr",
   appMode = "api",
+  appPrimaryDoc = "plumber.R",
   forceGeneratePythonEnvironment = TRUE
 )

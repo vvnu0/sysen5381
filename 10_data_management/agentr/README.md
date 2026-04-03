@@ -10,11 +10,17 @@
 2. Create a Python environment with **`requirements.txt`** (same stack as agentpy for `crewai_tools`), then either:
    - `reticulate::install_python()` / `reticulate::py_install(c("crewai[tools]"), pip = TRUE)`, or  
    - Point **`RETICULATE_PYTHON`** in `.env` at that interpreter.
-3. Copy **`.env.example`** → **`.env`** and set at least **`OLLAMA_API_KEY`**, **`OLLAMA_HOST`**, **`OLLAMA_MODEL`**.
-4. From this folder:
+3. Copy **`.env.example`** → **`.env`** in **`agentr/`** (or repo root) and set at least **`OLLAMA_API_KEY`**, **`OLLAMA_HOST`**, **`OLLAMA_MODEL`**.
+4. From the **repository root** (same path convention as [`mcp_plumber/runme.R`](../../08_function_calling/mcp_plumber/runme.R)):
 
 ```r
-Rscript runme.R
+source("10_data_management/agentr/runme.R")
+```
+
+or:
+
+```r
+Rscript 10_data_management/agentr/runme.R
 ```
 
 5. **`GET http://127.0.0.1:8000/health`** and **`POST http://127.0.0.1:8000/hooks/agent`** with JSON `{"task":"…"}` (same as agentpy).
@@ -23,12 +29,21 @@ Optional: **`logs/agent.log`** when **`AGENT_LOG_FILE`** is unset (see agentpy R
 
 ---
 
+## Activities
+
+Module activities live in **[`10_data_management/`](../)** and cover **either** R (**this folder**) or Python (**[`agentpy/`](../agentpy/README.md)**). Complete in order:
+
+1. [ACTIVITY: Run the Autonomous Agent Locally](../ACTIVITY_agent_local.md) — **R track:** follow Quick start above; **Python track:** see **[`agentpy/README.md`](../agentpy/README.md)**.
+2. [ACTIVITY: Deploy the Autonomous Agent](../ACTIVITY_agent_deploy.md) — **R track:** **`manifestme.R`**, **`deployme.R`**, **`testme.R`** from repo root (see [Posit Connect](#posit-connect)); **Python track:** **`agentpy/manifestme.sh`**, **`deployme.sh`**, **`testme.py`**.
+
+---
+
 ## Layout
 
 | Path | Role |
 |------|------|
 | **`plumber.R`** | Plumber app: routes + session store + sources **`R/`** |
-| **`R/guardrails.R`** | Turn caps, skill paths, **`AGENTR_ROOT`** / **`getwd()`** |
+| **`R/guardrails.R`** | Turn caps, skill paths; **`agent_root()`** uses **`AGENTR_ROOT`** or auto-detect (cwd **`agentr/`** or repo-relative **`10_data_management/agentr`**) |
 | **`R/context.R`** | **`AGENT.md`** + skill listing in system prompt |
 | **`R/tools_reticulate.R`** | **`ollama_tool_definitions`**, **`run_web_search`** (Serper via reticulate), **`run_read_skill`** |
 | **`R/ollama_chat.R`** | One **`httr2`** round-trip to Ollama |
@@ -42,11 +57,11 @@ Optional: **`logs/agent.log`** when **`AGENT_LOG_FILE`** is unset (see agentpy R
 ## Posit Connect
 
 - Deploy as an **R API** (Plumber), not the Python **`rsconnect deploy api`** flow.
-- From **`agentr/`**: **`Rscript manifestme.R`** then **`Rscript deployme.R`** (after **`rsconnect::addServer`** / **`.env`** with **`CONNECT_SERVER`** and **`CONNECT_API_KEY`**), mirroring [`08_function_calling/mcp_plumber/deployme.R`](../../08_function_calling/mcp_plumber/deployme.R).
+- From the **repository root**: **`Rscript 10_data_management/agentr/manifestme.R`** (optional) then **`Rscript 10_data_management/agentr/deployme.R`**, following the same layout as [`mcp_plumber/deployme.R`](../../08_function_calling/mcp_plumber/deployme.R) (numbered sections, **`readRenviron(".env")`**, **`rsconnect::addServer`**, **`deployAPI`**). Use **`.env`** at the repo root with **`CONNECT_SERVER`**, **`CONNECT_API_KEY`**, and optional **`CONNECT_TITLE`**; the **`server`** name in **`deployme.R`** is **`connect-fraser`** — change it to match your **`addServer`** nickname if needed.
 - Ensure Connect installs **`requirements.txt`** so **`reticulate`** can import **`crewai_tools`**.
 - Set server env vars: **`OLLAMA_API_KEY`**, **`OLLAMA_HOST`**, **`OLLAMA_MODEL`**, optional **`SERPER_API_KEY`**.
 
-Smoke test after deploy: set **`AGENT_PUBLIC_URL`** and run **`Rscript testme.R`**.
+Smoke test after deploy: set **`AGENT_PUBLIC_URL`** in **`.env`** and run **`Rscript 10_data_management/agentr/testme.R`** from the repo root.
 
 ---
 

@@ -2,20 +2,31 @@
 # Plumber API — disaster situational brief agent (parity with agentpy FastAPI)
 # Tim Fraser
 #
-# Run locally (from the agentr/ folder, after readRenviron(".env") or export vars):
-#   Rscript runme.R
-# Or:
-#   Rscript -e "setwd('10_data_management/agentr'); plumber::plumb('plumber.R')$run(host='0.0.0.0', port=8000)"
+# Run locally (repository root = getwd(), same convention as mcp_plumber/runme.R):
+#   Rscript 10_data_management/agentr/runme.R
+# Or from R: plumber::plumb("10_data_management/agentr/plumber.R")$run(host="0.0.0.0", port=8000)
 
 library(plumber)
 library(jsonlite)
 library(httr2)
 library(reticulate)
 
-# Working directory should be agentr/ so AGENT.md and skills/ resolve.
-if (!nzchar(Sys.getenv("AGENTR_ROOT", unset = ""))) {
-  Sys.setenv(AGENTR_ROOT = normalizePath(getwd(), winslash = "/", mustWork = FALSE))
+# Resolve activity root: explicit AGENTR_ROOT, else cwd if already agentr/, else repo-relative path.
+agentr_app_root = function() {
+  e = Sys.getenv("AGENTR_ROOT", unset = "")
+  if (nzchar(e)) {
+    return(normalizePath(e, winslash = "/", mustWork = FALSE))
+  }
+  if (file.exists("plumber.R") && dir.exists("R") && dir.exists("skills")) {
+    return(normalizePath(getwd(), winslash = "/", mustWork = FALSE))
+  }
+  cand = normalizePath("10_data_management/agentr", winslash = "/", mustWork = FALSE)
+  if (dir.exists(cand) && file.exists(file.path(cand, "plumber.R"))) {
+    return(cand)
+  }
+  normalizePath(getwd(), winslash = "/", mustWork = FALSE)
 }
+Sys.setenv(AGENTR_ROOT = agentr_app_root())
 
 if (file.exists(file.path(Sys.getenv("AGENTR_ROOT"), ".env"))) {
   readRenviron(file.path(Sys.getenv("AGENTR_ROOT"), ".env"))

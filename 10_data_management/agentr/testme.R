@@ -2,20 +2,15 @@
 # Smoke-test the deployed agent (Posit Connect or any public base URL)
 # Tim Fraser
 #
-# Requires AGENT_PUBLIC_URL in .env (deployed base, no trailing slash).
-# Uses httr2 (same checks as agentpy/testme.py).
+# Same pattern as agentpy/testme.py. Set AGENT_PUBLIC_URL in .env (repository root or agentr/).
+#
+# 0. SETUP ###################################
 
 library(httr2)
 
-args = commandArgs(trailingOnly = FALSE)
-f = sub("^--file=", "", args[grepl("^--file=", args)])[1]
-if (!is.na(f) && nzchar(f)) {
-  setwd(dirname(normalizePath(f, winslash = "/", mustWork = FALSE)))
-}
+readRenviron(".env")
 
-if (file.exists(".env")) {
-  readRenviron(".env")
-}
+# 1. REQUESTS ################################################################
 
 base = trimws(Sys.getenv("AGENT_PUBLIC_URL", unset = ""))
 base = sub("/$", "", base)
