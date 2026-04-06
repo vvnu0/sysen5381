@@ -377,3 +377,82 @@ The application handles errors gracefully with visual feedback:
 
 
 *Built with Shiny for Python, Plotly, and Ollama*
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#111111",
+    "primaryColor": "#1f1f1f",
+    "primaryBorderColor": "#1f1f1f",
+    "primaryTextColor": "#f2f2f2",
+    "lineColor": "#d0d0d0",
+    "clusterBkg": "#53565a",
+    "clusterBorder": "#53565a"
+  }
+}}%%
+flowchart TD
+  subgraph UI["👤 User Input"]
+    direction TB
+    countries["Select Countries"]
+    dates["Set Date Range"]
+    fetch["Click Fetch Data"]
+
+    countries --> fetch
+    dates --> fetch
+  end
+
+  subgraph API["🖊️ Guardian API"]
+    direction TB
+    search["GET /search endpoint"]
+    articles["Returns JSON with articles"]
+
+    search --> articles
+  end
+
+  subgraph DP["⚙️ Data Processing"]
+    direction TB
+    parse["Parse article metadata"]
+    classify["Classify topics by section"]
+    percap["Calculate per-capita coverage"]
+    agg["Aggregate counts & statistics"]
+
+    parse --> classify --> percap --> agg
+  end
+
+  subgraph AI["🤖 AI Analysis"]
+    direction TB
+    format["Format data as structured text"]
+    ollama["Send to Ollama with prompt"]
+    report["Generate analytical report"]
+    insights["Display insights & implications"]
+
+    format --> ollama --> report --> insights
+  end
+
+  subgraph VIZ["📊 Visualization"]
+    direction LR
+    value["Value Boxes: totals & top country"]
+    bar["Bar Charts: counts & per-capita"]
+    pie["Pie/Stacked Charts: topic breakdown"]
+    table["Data Tables: filterable details"]
+  end
+
+  fetch --> search
+  articles --> parse
+
+  agg --> format
+  agg --> value
+  agg --> bar
+  agg --> pie
+  agg --> table
+
+  classDef node fill:#1f1f1f,stroke:#1f1f1f,color:#f2f2f2;
+  class countries,dates,fetch,search,articles,parse,classify,percap,agg,format,ollama,report,insights,value,bar,pie,table node;
+
+  style UI fill:#53565a,stroke:#53565a,color:#f2f2f2
+  style API fill:#53565a,stroke:#53565a,color:#f2f2f2
+  style DP fill:#53565a,stroke:#53565a,color:#f2f2f2
+  style AI fill:#53565a,stroke:#53565a,color:#f2f2f2
+  style VIZ fill:#53565a,stroke:#53565a,color:#f2f2f2
+```

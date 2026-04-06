@@ -16,13 +16,15 @@
 #   See deployme.py
 #
 # Packages:
-#   pip install fastapi uvicorn pandas
+#   pip install fastapi uvicorn pandas numpy
 #   (requests only needed if you use testme.py for Ollama)
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
-import pandas as pd
 import json
+
+import numpy as np
+import pandas as pd
 
 app = FastAPI()
 
@@ -42,7 +44,32 @@ TOOLS = [
             },
             "required": ["dataset_name"],
         },
-    }
+    },
+    {
+        "name": "linear_regression",
+        "description": (
+            "Fit ordinary least squares linear regression of y on x for two numeric columns "
+            "in mtcars or iris. Returns slope, intercept, r_squared, and n (rows used)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "dataset_name": {
+                    "type": "string",
+                    "description": "Dataset to use. Options: 'mtcars' or 'iris'.",
+                },
+                "x_column": {
+                    "type": "string",
+                    "description": "Numeric predictor column name (e.g. 'wt' or 'hp' in mtcars).",
+                },
+                "y_column": {
+                    "type": "string",
+                    "description": "Numeric outcome column name (e.g. 'mpg' in mtcars).",
+                },
+            },
+            "required": ["dataset_name", "x_column", "y_column"],
+        },
+    },
 ]
 
 # ── Tool logic (same datasets as R: mtcars, iris via Rdatasets CSV) ──
@@ -65,6 +92,41 @@ def run_tool(name: str, args: dict) -> str:
         summary.index.name = "variable"
         summary.columns = ["mean", "sd", "min", "max"]
         return summary.reset_index().to_json(orient="records", indent=2)
+
+    if name == "linear_regression":
+        nm = args.get("dataset_name")
+        if nm not in DATASETS:
+            raise ValueError(f"Unknown dataset: '{nm}' — choose 'mtcars' or 'iris'")
+
+        x_col = args.get("x_column")
+        y_col = args.get("y_column")
+        df = DATASETS[nm].copy()
+        if x_col not in df.columns or y_col not in df.columns:
+            raise ValueError(f"Unknown column(s): x={x_col!r}, y={y_col!r} in {nm}")
+
+        x = pd.to_numeric(df[x_col], errors="coerce")
+        y = pd.to_numeric(df[y_col], errors="coerce")
+        ok = x.notna() & y.notna()
+        n = int(ok.sum())
+        if n < 2:
+            raise ValueError("Need at least 2 rows with non-missing numeric x and y")
+
+        xv = x[ok].to_numpy(dtype=float)
+        yv = y[ok].to_numpy(dtype=float)
+        slope, intercept = np.polyfit(xv, yv, 1)
+        r = np.corrcoef(xv, yv)[0, 1]
+        r_squared = float(r) ** 2
+
+        out = {
+            "dataset": nm,
+            "x_column": x_col,
+            "y_column": y_col,
+            "n": n,
+            "slope": round(float(slope), 4),
+            "intercept": round(float(intercept), 4),
+            "r_squared": round(float(r_squared), 4),
+        }
+        return json.dumps(out, indent=2)
 
     raise ValueError(f"Unknown tool: {name}")
 

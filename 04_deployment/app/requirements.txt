@@ -4,3 +4,6 @@ plotly
 requests
 python-dotenv
 python-dateutil
+tabulate
+sentence-transformers
+sqlite-vec

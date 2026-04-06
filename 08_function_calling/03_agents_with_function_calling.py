@@ -69,6 +69,26 @@ def get_table(df=None):
         df = pd.DataFrame([df])
     return df.to_markdown(index=False)
 
+
+def calculate_average(numbers):
+    """
+    Compute the arithmetic mean of a list of numbers.
+
+    Parameters:
+    -----------
+    numbers : list of float
+        Values to average
+
+    Returns:
+    --------
+    float
+        Mean of numbers (0.0 if the list is empty)
+    """
+    if not numbers:
+        return 0.0
+    return sum(numbers) / len(numbers)
+
+
 # 2. DEFINE TOOL METADATA ###################################
 
 # Define the tool metadata for add_two_numbers
@@ -107,6 +127,26 @@ tool_get_table = {
                 "df": {
                     "type": "object",
                     "description": "The data.frame to convert to a markdown table using pandas to_markdown()"
+                }
+            }
+        }
+    }
+}
+
+# Define the tool metadata for calculate_average
+tool_calculate_average = {
+    "type": "function",
+    "function": {
+        "name": "calculate_average",
+        "description": "Calculate the arithmetic mean of a list of numbers",
+        "parameters": {
+            "type": "object",
+            "required": ["numbers"],
+            "properties": {
+                "numbers": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "description": "list of numeric values to average"
                 }
             }
         }
@@ -170,5 +210,25 @@ print("Manual Table Creation:")
 manual_table = df.to_markdown(index=False)
 print(manual_table)
 print()
+
+# 6. EXAMPLE 4: TOOL CALL #3 (calculate_average) ###################################
+
+messages = [
+    {"role": "user", "content": "What is the average of 10, 20, and 30? Use the tool."}
+]
+
+resp3 = agent(
+    messages=messages,
+    model=MODEL,
+    output="tools",
+    tools=[tool_calculate_average],
+)
+print("Tool Call #3 (calculate_average) Result:")
+print(resp3)
+print()
+
+if isinstance(resp3, list) and len(resp3) > 0:
+    print(f"Tool output: {resp3[0].get('output', 'No output')}")
+    print()
 
 # Note: We can use the agent() function to rapidly build and test out agents with or without tools.

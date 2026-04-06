@@ -7,6 +7,8 @@
 # - LAB 1: Guardian API integration for geographic news coverage data
 # - LAB 2: Interactive Shiny dashboard with charts and data tables
 # - LAB 3: AI-powered reporting via Ollama with insights generation
+# - Multi-agent orchestration + function calling (agent_workflow.py)
+# - RAG over Guardian headlines/trail text (rag_guardian.py)
 
 # 0. Setup #################################
 
@@ -26,6 +28,9 @@ import plotly.express as px
 
 from shiny import reactive, render
 from shiny.express import input, ui
+
+import agent_workflow
+import rag_guardian
 
 ## 0.2 Load Environment Variables ################
 
@@ -278,6 +283,36 @@ OUTPUT FORMAT:
         return f"Error: {str(e)}"
 
 
+def ollama_system_user(system_prompt, user_content):
+    """Ollama Cloud chat with explicit system + user messages (for agent chains)."""
+    if not OLLAMA_API_KEY:
+        return "Error: OLLAMA_API_KEY not found in .env file."
+    body = {
+        "model": OLLAMA_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+        "stream": False,
+    }
+    headers = {
+        "Authorization": f"Bearer {OLLAMA_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.post(OLLAMA_URL, headers=headers, json=body, timeout=120)
+        if response.status_code != 200:
+            return f"Error: Ollama Cloud returned status {response.status_code}."
+        result = response.json()
+        if "message" not in result or "content" not in result["message"]:
+            return "Error: Unexpected response format from Ollama Cloud."
+        return result["message"]["content"]
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to Ollama Cloud."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
 # 2. Page Configuration ############################
 
 # Set page title (compatible with older Shiny versions)
@@ -518,6 +553,41 @@ with ui.sidebar(open="desktop", width=300):
     )
     
     ui.hr()
+    ui.markdown("**Multi-agent + tool calling**")
+    ui.p(
+        "Uses get_guardian_coverage (Guardian API). If local Ollama is running, "
+        "Agent 1 can invoke the tool via LLM; otherwise the tool runs in Python. "
+        "Agents 2–3 use Ollama Cloud on the table and brief.",
+        class_="small text-muted",
+    )
+    ui.input_select(
+        "orch_country", "Country for workflow",
+        choices=COUNTRIES, selected=COUNTRIES[0],
+    )
+    ui.input_action_button(
+        "run_orchestration", "Run agent workflow", class_="btn-primary w-100",
+    )
+    
+    ui.hr()
+    ui.markdown("**RAG (semantic search)**")
+    ui.p(
+        "Builds an embedding index from headlines + trail text for the countries "
+        "and dates above (same as Fetch Data). Requires sentence-transformers, "
+        "sqlite-vec, and OLLAMA_API_KEY.",
+        class_="small text-muted",
+    )
+    ui.input_action_button(
+        "build_rag_index", "Build RAG index", class_="btn-primary w-100",
+    )
+    ui.input_text_area(
+        "rag_question", "Question for RAG",
+        rows=2, placeholder="What themes show up in this coverage?",
+    )
+    ui.input_action_button(
+        "rag_ask", "RAG answer", class_="btn-success w-100",
+    )
+    
+    ui.hr()
     ui.markdown(
         "*Data: [The Guardian](https://open-platform.theguardian.com/) | "
         "AI: [Ollama](https://ollama.ai/)*"
@@ -623,6 +693,70 @@ def generate_ai_report():
         return query_ollama(data_text)
     except Exception as e:
         return f"**Error generating report:** {str(e)}"
+
+
+@reactive.calc
+@reactive.event(input.run_orchestration)
+def orchestration_result():
+    """3-agent chain: tool coverage → analyst (cloud) → executive brief (cloud)."""
+    if not GUARDIAN_API_KEY:
+        return {
+            "error": "GUARDIAN_API_KEY not set.",
+            "mode": "", "coverage_markdown": "", "analyst_report": "", "executive_brief": "",
+        }
+    try:
+        country = input.orch_country()
+        from_date = str(input.from_date())
+        to_date = str(input.to_date())
+        if from_date >= to_date:
+            return {
+                "error": "From date must be before to date.",
+                "mode": "", "coverage_markdown": "", "analyst_report": "", "executive_brief": "",
+            }
+        return agent_workflow.run_coverage_orchestration(
+            country, from_date, to_date,
+            api_key=GUARDIAN_API_KEY,
+            cloud_llm_fn=ollama_system_user,
+        )
+    except Exception as e:
+        return {
+            "error": str(e),
+            "mode": "", "coverage_markdown": "", "analyst_report": "", "executive_brief": "",
+        }
+
+
+@reactive.calc
+@reactive.event(input.build_rag_index)
+def rag_index_status():
+    """Fetch RAG-rich articles and rebuild sqlite-vec index."""
+    if not GUARDIAN_API_KEY:
+        return {"error": "GUARDIAN_API_KEY not set."}
+    selected = list(input.countries())
+    if not selected:
+        return {"error": "Select at least one country."}
+    from_date = str(input.from_date())
+    to_date = str(input.to_date())
+    if from_date >= to_date:
+        return {"error": "From date must be before to date."}
+    articles, err = rag_guardian.collect_articles_for_rag(
+        selected, from_date, to_date, GUARDIAN_API_KEY
+    )
+    if err:
+        return {"error": err}
+    _path, berr = rag_guardian.rebuild_rag_index(articles, rag_guardian.DB_PATH)
+    if berr:
+        return {"error": berr}
+    return {"ok": True, "n_articles": len(articles), "path": _path}
+
+
+@reactive.calc
+@reactive.event(input.rag_ask)
+def rag_qa_result():
+    """Retrieve top-k chunks and answer with Ollama Cloud."""
+    q = (input.rag_question() or "").strip()
+    if not q:
+        return {"error": "Enter a question.", "answer": "", "sources": []}
+    return rag_guardian.rag_answer(rag_guardian.DB_PATH, q, k=5)
 
 
 # 5. Main Panel — Dashboard Layout #################
@@ -883,4 +1017,80 @@ with ui.card(full_screen=True):
         return ui.div(
             ui.markdown(report),
             class_="p-3"
+        )
+
+
+# Row 6: Multi-agent orchestration (tool + 2 cloud agents)
+with ui.card(full_screen=True):
+    ui.card_header("Multi-agent orchestration (function calling + cloud analysts)")
+
+    @render.ui
+    def orchestration_card():
+        if input.run_orchestration() == 0:
+            return ui.p(
+                "Choose a country and click **Run agent workflow**. "
+                "Agent 1 loads Guardian topic coverage (tool via local LLM when Ollama "
+                "is available, else direct API). Agents 2–3 run on Ollama Cloud.",
+                class_="text-muted p-4",
+            )
+        r = orchestration_result()
+        if r.get("error"):
+            return ui.div(ui.p(r["error"], class_="text-danger p-4"))
+        parts = [
+            ui.p(ui.tags.strong("Agent 1 mode: "), r.get("mode", ""), class_="small"),
+            ui.markdown("### Coverage table (tool output)"),
+            ui.tags.pre(
+                r.get("coverage_markdown", ""),
+                class_="bg-light p-2 rounded small",
+                style="white-space: pre-wrap;",
+            ),
+            ui.markdown("### Agent 2 — Analyst report"),
+            ui.markdown(r.get("analyst_report", "") or "—"),
+            ui.markdown("### Agent 3 — Executive brief"),
+            ui.markdown(r.get("executive_brief", "") or "—"),
+        ]
+        return ui.div(*parts, class_="p-3")
+
+
+# Row 7: RAG Q&A
+with ui.card(full_screen=True):
+    ui.card_header("RAG Q&A (semantic retrieval + cited answers)")
+
+    @render.ui
+    def rag_status_line():
+        if input.build_rag_index() == 0:
+            return ui.p("Build the index after fetching parameters.", class_="text-muted small p-2")
+        s = rag_index_status()
+        if s.get("error"):
+            return ui.p(s["error"], class_="text-danger small p-2")
+        return ui.p(
+            f"Index ready: {s['n_articles']} articles at {s['path']}",
+            class_="text-success small p-2",
+        )
+
+    @render.ui
+    def rag_answer_card():
+        if input.rag_ask() == 0:
+            return ui.p(
+                "Build the RAG index, enter a question, then click **RAG answer**.",
+                class_="text-muted p-4",
+            )
+        res = rag_qa_result()
+        if res.get("error"):
+            return ui.p(res["error"], class_="text-danger p-4")
+        src_blocks = []
+        for i, src in enumerate(res.get("sources") or [], 1):
+            src_blocks.append(
+                ui.tags.li(
+                    ui.tags.a(src["headline"], href=src.get("short_url") or "#", target="_blank"),
+                    ui.tags.span(f" — {src.get('country', '')} / {src.get('section', '')} "
+                                 f"(score {src.get('score', '')})",
+                                 class_="text-muted small"),
+                )
+            )
+        return ui.div(
+            ui.markdown(res.get("answer", "") or "—"),
+            ui.tags.h6("Sources", class_="mt-3"),
+            ui.tags.ul(*src_blocks) if src_blocks else ui.p("No sources", class_="text-muted"),
+            class_="p-3",
         )
