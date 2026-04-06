@@ -320,7 +320,7 @@ Uses `get_guardian_coverage` + a second cloud call (imports `df_as_text` from th
 
 ---
 
-### End-to-end dashboard diagram
+### End-to-end system diagram (dashboard + Ask The Guardian)
 
 ```mermaid
 %%{init: {
@@ -336,7 +336,7 @@ Uses `get_guardian_coverage` + a second cloud call (imports `df_as_text` from th
   }
 }}%%
 flowchart TD
-  subgraph UI[User input]
+  subgraph UI[Sidebar dashboard input]
     direction TB
     countries[Select countries]
     dates[Set date range]
@@ -346,12 +346,23 @@ flowchart TD
     dates --> fetch
   end
 
+  subgraph ChatUI[Ask The Guardian input]
+    direction TB
+    chatQuery[Type natural language question]
+    chatSearch[Click Search]
+
+    chatQuery --> chatSearch
+  end
+
   subgraph API[Guardian API]
     direction TB
-    search[GET /search]
-    articles[JSON articles]
+    searchDash[GET /search dashboard]
+    searchTool[GET /search via tool]
+    articlesDash[JSON for charts]
+    articlesRag[JSON for RAG chunks]
 
-    search --> articles
+    searchDash --> articlesDash
+    searchTool --> articlesRag
   end
 
   subgraph DP[Data processing]
@@ -364,7 +375,24 @@ flowchart TD
     parse --> classify --> percap --> agg
   end
 
-  subgraph AI[AI analysis]
+  subgraph RAGPipe[RAG and chatbot agents]
+    direction TB
+    agent1[Agent1 Ollama Cloud + tool call]
+    toolRun[Execute search_guardian_articles]
+    embedIdx[Embed with sentence-transformers sqlite-vec]
+    knnSearch[Semantic top-k retrieval]
+    agent2[Agent2 Ollama Cloud RAG answer]
+    chatOut[Assistant text + Sources cards]
+
+    agent1 --> toolRun
+    toolRun --> searchTool
+    articlesRag --> embedIdx
+    embedIdx --> knnSearch
+    knnSearch --> agent2
+    agent2 --> chatOut
+  end
+
+  subgraph AI[Dashboard AI report]
     direction TB
     format[Format summary text]
     ollama[Ollama Cloud chat]
@@ -381,8 +409,10 @@ flowchart TD
     table[Data tables]
   end
 
-  fetch --> search
-  articles --> parse
+  fetch --> searchDash
+  articlesDash --> parse
+
+  chatSearch --> agent1
 
   agg --> format
   agg --> value
@@ -391,11 +421,13 @@ flowchart TD
   agg --> table
 
   classDef node fill:#1f1f1f,stroke:#1f1f1f,color:#f2f2f2;
-  class countries,dates,fetch,search,articles,parse,classify,percap,agg,format,ollama,report,value,bar,pie,table node;
+  class countries,dates,fetch,chatQuery,chatSearch,searchDash,searchTool,articlesDash,articlesRag,parse,classify,percap,agg,agent1,toolRun,embedIdx,knnSearch,agent2,chatOut,format,ollama,report,value,bar,pie,table node;
 
   style UI fill:#53565a,stroke:#53565a,color:#f2f2f2
+  style ChatUI fill:#53565a,stroke:#53565a,color:#f2f2f2
   style API fill:#53565a,stroke:#53565a,color:#f2f2f2
   style DP fill:#53565a,stroke:#53565a,color:#f2f2f2
+  style RAGPipe fill:#53565a,stroke:#53565a,color:#f2f2f2
   style AI fill:#53565a,stroke:#53565a,color:#f2f2f2
   style VIZ fill:#53565a,stroke:#53565a,color:#f2f2f2
 ```
