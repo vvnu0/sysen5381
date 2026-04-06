@@ -1,38 +1,38 @@
 # agent_workflow.py
-# Multi-Agent Guardian Coverage Analyzer
+# Multi-Agent Guardian Coverage Analyzer (Ollama Cloud + function calling)
 # Pairs with app.py (Guardian News Coverage Analyzer)
 # Tim Fraser
 
-# This module defines a custom Guardian API tool, tool metadata for function calling,
-# and a 2–3 agent orchestration: (1) fetch coverage via the tool, (2) analyze the
-# table, (3) optionally condense into an executive brief. When local Ollama is
-# available, Agent 1 uses LLM-driven tool calls; otherwise the tool runs directly
-# and cloud LLM handles the analysis agents.
+# This module provides cloud_agent / cloud_agent_run for Ollama Cloud with
+# tool execution, plus Guardian API tools used by the dashboard chatbot.
 
 # 0. SETUP ###################################
 
 ## 0.1 Load Packages #################################
 
+import json
 import os
 import sys
-import requests
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+import requests
 from dotenv import load_dotenv
 
-## 0.2 Import Agent Functions (local Ollama only) ########################
+## 0.2 Load Environment Variables ####################
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(_REPO_ROOT / "08_function_calling"))
-
-_env_path = _REPO_ROOT / ".env"
-load_dotenv(dotenv_path=_env_path)
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 GUARDIAN_API_KEY = os.getenv("GUARDIAN_API_KEY")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
+OLLAMA_URL = "https://ollama.com/api/chat"
+OLLAMA_MODEL = "gpt-oss:20b-cloud"
 
-## 0.3 Configuration ################################
+## 0.3 Import RAG / Guardian helpers ################
 
-MODEL = "smollm2:1.7b"
+from rag_guardian import COUNTRIES as RAG_COUNTRIES, query_guardian
 
+# Same topic classification map used in app.py
 TOPIC_MAP = {
     "politics": "Politics", "world": "Politics", "us-news": "Politics",
     "uk-news": "Politics", "australia-news": "Politics", "law": "Politics",
@@ -59,16 +59,140 @@ POPULATIONS = {
 COUNTRIES = list(POPULATIONS.keys())
 
 
-# 1. DEFINE CUSTOM TOOL FUNCTION ###################################
+# 1. OLLAMA CLOUD AGENT WITH TOOLS #############################
 
-def get_guardian_coverage(country, from_date, to_date, api_key=None):
+def _resolve_tool_function(func_name):
+    """Find a tool function in this module or the caller's globals."""
+    func = globals().get(func_name)
+    if func is not None:
+        return func
+    for depth in range(1, 8):
+        try:
+            frame = sys._getframe(depth)
+            func = frame.f_globals.get(func_name)
+            if func is not None:
+                return func
+        except ValueError:
+            break
+    return None
+
+
+def cloud_agent(messages, model=OLLAMA_MODEL, output="text", tools=None, all=False):
+    """
+    Single turn to Ollama Cloud. With tools, executes tool calls locally and
+    attaches outputs to each tool_call dict (same pattern as 08_function_calling/functions.py).
+    """
+    if not OLLAMA_API_KEY:
+        raise ValueError("OLLAMA_API_KEY not found in .env file.")
+
+    body = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+    }
+    if tools is not None:
+        body["tools"] = tools
+
+    headers = {
+        "Authorization": f"Bearer {OLLAMA_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(OLLAMA_URL, headers=headers, json=body, timeout=180)
+    response.raise_for_status()
+    result = response.json()
+
+    if tools is not None and "tool_calls" in result.get("message", {}):
+        tool_calls = result["message"]["tool_calls"]
+        for tool_call in tool_calls:
+            func_name = tool_call["function"]["name"]
+            raw_args = tool_call["function"].get("arguments", {})
+            func_args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+            func = _resolve_tool_function(func_name)
+            if func:
+                tool_output = func(**func_args)
+                tool_call["output"] = tool_output
+
+    if all:
+        return result
+
+    if "tool_calls" in result.get("message", {}):
+        tool_calls = result["message"]["tool_calls"]
+        if output == "tools":
+            return tool_calls
+        if tool_calls:
+            return tool_calls[-1].get("output", result["message"].get("content", ""))
+    return result["message"].get("content", "")
+
+
+def cloud_agent_run(role, task, tools=None, output="text", model=OLLAMA_MODEL):
+    """Run one agent turn with optional system role (mirrors functions.agent_run)."""
+    messages = [
+        {"role": "system", "content": role},
+        {"role": "user", "content": task},
+    ]
+    return cloud_agent(messages=messages, model=model, output=output, tools=tools)
+
+
+# 2. TOOL: FETCH ARTICLES FOR RAG / CHATBOT ##################
+
+def search_guardian_articles(country, from_date, to_date):
+    """
+    Fetch Guardian articles mentioning a country in a date range.
+    Returns a list of dicts with headline, trail_text, short_url, section, date, country.
+    Used by Agent 1 (query parser) via function calling.
+    """
+    if not GUARDIAN_API_KEY:
+        return [{"error": "GUARDIAN_API_KEY not configured"}]
+    articles, _total, error = query_guardian(country, from_date, to_date, GUARDIAN_API_KEY)
+    if error:
+        return [{"error": error}]
+    if not articles:
+        return [{"error": f"No articles found for {country} in range {from_date} to {to_date}"}]
+    return articles
+
+
+tool_search_guardian_articles = {
+    "type": "function",
+    "function": {
+        "name": "search_guardian_articles",
+        "description": (
+            "Fetch Guardian newspaper article records for semantic search and analysis. "
+            "Use the country and date range implied by the user's question "
+            "(e.g. 'United States', 'last week' as concrete YYYY-MM-DD bounds). "
+            f"Country must be one of: {', '.join(RAG_COUNTRIES)}."
+        ),
+        "parameters": {
+            "type": "object",
+            "required": ["country", "from_date", "to_date"],
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "description": f"Country name. Options: {', '.join(RAG_COUNTRIES)}.",
+                },
+                "from_date": {
+                    "type": "string",
+                    "description": "Start date YYYY-MM-DD (inclusive).",
+                },
+                "to_date": {
+                    "type": "string",
+                    "description": "End date YYYY-MM-DD (inclusive).",
+                },
+            },
+        },
+    },
+}
+
+
+# 3. TOOL: TOPIC BREAKDOWN (STANDALONE DEMO) ##################
+
+def get_guardian_coverage(country, from_date, to_date):
     """
     Query the Guardian API for articles mentioning a country and return
     a topic breakdown summary as a pandas DataFrame.
     """
-    key = api_key or GUARDIAN_API_KEY
-    if not key:
-        return pd.DataFrame({"error": ["Missing GUARDIAN_API_KEY"]})
+    if not GUARDIAN_API_KEY:
+        return pd.DataFrame({"error": ["GUARDIAN_API_KEY not configured"]})
 
     response = requests.get(
         "https://content.guardianapis.com/search",
@@ -78,7 +202,7 @@ def get_guardian_coverage(country, from_date, to_date, api_key=None):
             "to-date": to_date,
             "page-size": 50,
             "show-fields": "wordcount",
-            "api-key": key,
+            "api-key": GUARDIAN_API_KEY,
         },
         timeout=15,
     )
@@ -116,8 +240,6 @@ def get_guardian_coverage(country, from_date, to_date, api_key=None):
     return topic_counts
 
 
-# 2. DEFINE TOOL METADATA ###################################
-
 tool_get_guardian_coverage = {
     "type": "function",
     "function": {
@@ -134,144 +256,57 @@ tool_get_guardian_coverage = {
             "properties": {
                 "country": {
                     "type": "string",
-                    "description": f"The country to search for. Options are: {', '.join(COUNTRIES)}."
+                    "description": f"The country to search for. Options are: {', '.join(COUNTRIES)}.",
                 },
                 "from_date": {
                     "type": "string",
-                    "description": "Start date in YYYY-MM-DD format (e.g. '2026-03-01')"
+                    "description": "Start date in YYYY-MM-DD format (e.g. '2026-03-01')",
                 },
                 "to_date": {
                     "type": "string",
-                    "description": "End date in YYYY-MM-DD format (e.g. '2026-04-01')"
-                }
-            }
-        }
-    }
+                    "description": "End date in YYYY-MM-DD format (e.g. '2026-04-01')",
+                },
+            },
+        },
+    },
 }
 
 
-# 3. MULTI-AGENT ORCHESTRATION ###################################
-
-def _df_to_markdown(df):
-    """Markdown table for LLM consumption (requires tabulate for pandas)."""
-    return df.to_markdown(index=False)
-
-
-def run_coverage_orchestration(country, from_date, to_date, *, api_key, cloud_llm_fn):
-    """
-    Run a 3-agent workflow: (1) Guardian coverage via tool / function calling,
-    (2) media analyst report from the table, (3) executive brief from the report.
-
-    cloud_llm_fn(system_prompt: str, user_content: str) -> str
-        Must call your cloud LLM (e.g. Ollama Cloud). Used for agents 2 and 3.
-
-    Returns a dict with keys: mode, coverage_markdown, analyst_report, executive_brief, error (optional).
-    """
-    role_fetch = "I fetch news article data from the Guardian API for media coverage analysis."
-    task_fetch = f"Get Guardian news coverage data for {country} from {from_date} to {to_date}"
-
-    coverage_df = None
-    mode = "direct_tool_call"
-
-    # Agent 1: prefer local Ollama + function calling; else direct tool execution
-    try:
-        from functions import agent_run
-
-        result1 = agent_run(
-            role=role_fetch,
-            task=task_fetch,
-            model=MODEL,
-            output="tools",
-            tools=[tool_get_guardian_coverage],
-        )
-        if isinstance(result1, list) and result1 and "output" in result1[0]:
-            cand = result1[0]["output"]
-            if isinstance(cand, pd.DataFrame) and len(cand) > 0 and "error" not in cand.columns:
-                coverage_df = cand
-                mode = "local_llm_tool_call"
-    except Exception:
-        pass
-
-    if coverage_df is None:
-        coverage_df = get_guardian_coverage(country, from_date, to_date, api_key=api_key)
-
-    if isinstance(coverage_df, pd.DataFrame) and "error" in coverage_df.columns:
-        return {
-            "mode": mode,
-            "coverage_markdown": _df_to_markdown(coverage_df),
-            "analyst_report": "",
-            "executive_brief": "",
-            "error": coverage_df["error"].iloc[0] if len(coverage_df) else "Coverage fetch failed",
-        }
-
-    coverage_md = _df_to_markdown(coverage_df)
-
-    role_analyst = (
-        "You are a media analyst specializing in global news coverage patterns. "
-        "Analyze the Guardian newspaper coverage data provided below. "
-        "Report specific numbers and percentages from the data. "
-        "Provide exactly 2 insights about the coverage patterns and what they "
-        "might indicate about media attention toward this country. "
-        "Use formal language. Be concise but thorough."
-    )
-    analyst_report = cloud_llm_fn(role_analyst, coverage_md)
-
-    role_editor = (
-        "You are an editor. Given the analyst report below, produce a short "
-        "executive brief: at most 5 bullet points for decision-makers. "
-        "No new facts beyond the report; formal tone."
-    )
-    executive_brief = cloud_llm_fn(role_editor, analyst_report)
-
-    return {
-        "mode": mode,
-        "coverage_markdown": coverage_md,
-        "analyst_report": analyst_report,
-        "executive_brief": executive_brief,
-        "error": None,
-    }
-
-
-# 4. CLI DEMO ###################################
+# 4. STANDALONE DEMO (LOCAL RUN ONLY) ########################
 
 if __name__ == "__main__":
-    if not GUARDIAN_API_KEY:
-        print("ERROR: GUARDIAN_API_KEY not found in .env file.")
+    if not GUARDIAN_API_KEY or not OLLAMA_API_KEY:
+        print("Set GUARDIAN_API_KEY and OLLAMA_API_KEY in .env at the project root.")
         sys.exit(1)
 
-    from functions import agent_run, df_as_text
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "08_function_calling"))
+    from functions import df_as_text
 
     print("=" * 60)
-    print("  Multi-Agent Guardian Coverage Analyzer (CLI)")
+    print("  Multi-Agent Guardian Coverage Analyzer (Ollama Cloud)")
     print("=" * 60)
 
-    task1 = "Get Guardian news coverage data for Australia from 2026-03-01 to 2026-04-01"
-    role1 = "I fetch news article data from the Guardian API for media coverage analysis."
+    task1 = "Get Guardian news coverage topic breakdown for Australia from 2026-03-01 to 2026-04-01"
+    role1 = "You call the get_guardian_coverage tool with the country and dates from the user message."
 
-    print(f"\nAgent 1 task: {task1}")
-    print("Running Agent 1...")
-    result1 = agent_run(
+    print(f"\nAgent 1 task: {task1}\n")
+    result1 = cloud_agent_run(
         role=role1,
         task=task1,
-        model=MODEL,
+        model=OLLAMA_MODEL,
         output="tools",
-        tools=[tool_get_guardian_coverage]
+        tools=[tool_get_guardian_coverage],
     )
+
     coverage_df = result1[0]["output"]
-    print("\nAgent 1 result (coverage data):")
+    print("Agent 1 result:")
     print(df_as_text(coverage_df))
 
     role2 = (
-        "You are a media analyst specializing in global news coverage patterns. "
-        "Analyze the Guardian newspaper coverage data provided below. "
-        "Report specific numbers and percentages from the data. "
-        "Provide exactly 2 insights about the coverage patterns and what they "
-        "might indicate about media attention toward this country. "
-        "Use formal language. Be concise but thorough."
+        "You are a media analyst. Analyze the Guardian coverage table below. "
+        "Report specific numbers and two brief insights. Use formal language."
     )
-    print("\nRunning Agent 2...")
-    result2 = agent_run(role=role2, task=df_as_text(coverage_df), model=MODEL, output="text")
-    print("\n" + "=" * 60)
-    print("  Agent 2 Analysis Report")
+    print("\nRunning Agent 2...\n")
+    result2 = cloud_agent_run(role=role2, task=df_as_text(coverage_df), model=OLLAMA_MODEL, output="text")
     print("=" * 60)
     print(result2)

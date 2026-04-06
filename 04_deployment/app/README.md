@@ -1,382 +1,340 @@
-# 🌍 Geographic Attention Reporter
+# Geographic Attention Reporter
 
-> **An AI-powered news analysis tool that reveals which countries dominate media attention and why.**
+> **An AI-powered news analysis tool that reveals which countries dominate media attention and why, with an optional natural-language Q&A layer over Guardian articles.**
 
-This integrated Shiny application queries The Guardian API for global news coverage, visualizes geographic patterns through interactive charts, and uses a local AI model (Ollama) to generate analytical insights.
-
----
-
-## 📋 Table of Contents
-
-- [What This Tool Does](#-what-this-tool-does)
-- [How It Works](#-how-it-works)
-- [Stakeholders and Use Cases](#-stakeholders-and-use-cases)
-- [Data Summary](#-data-summary)
-- [Technical Details](#-technical-details)
-- [Usage Instructions](#-usage-instructions)
-- [Error Handling](#-error-handling)
-- [Troubleshooting](#-troubleshooting)
+This Shiny application queries The Guardian API, visualizes geographic coverage, generates an AI report through **Ollama Cloud**, and includes **Ask The Guardian**: a multi-step workflow that uses **function calling**, **retrieval-augmented generation (RAG)**, and **semantic search** over fetched articles.
 
 ---
 
-## 🎯 What This Tool Does
+## Table of contents
 
-This app is a news coverage analyzer that pulls article data from The Guardian API and shows you how different countries are getting media attention. It lets you pick which countries and date range you want to look at, then fetches the data and displays it through interactive charts like bar graphs for raw article counts and per-capita coverage, plus pie charts showing topic breakdowns. The cool part is it also connects to a local AI model called Ollama that can read all that data and write up an analytical report with actual insights instead of just repeating the numbers back at you.
-
-### Three Core Capabilities
-
-| Lab | Feature | What It Does |
-|:---:|---------|--------------|
-| 🔌 LAB 1 | **API Integration** | Queries The Guardian for articles mentioning 10 countries |
-| 📊 LAB 2 | **Shiny Dashboard** | Interactive charts, tables, and value boxes |
-| 🤖 LAB 3 | **AI Reporting** | Generates analytical insights using Ollama LLM |
-
-### Dashboard Components
-
-- 📦 **Value Boxes** — Total articles, countries analyzed, most covered country
-- 📊 **Bar Charts** — Article count by country, per-capita coverage comparison
-- 🥧 **Topic Analysis** — Stacked bar chart and pie chart showing topic distribution
-- 📋 **Data Tables** — Filterable summary and article tables
-- 🤖 **AI Report** — Generated analysis with statistics, insights, and implications
+- [What this tool does](#what-this-tool-does)
+- [Extended system description](#extended-system-description-project-write-up)
+- [How it works](#how-it-works)
+- [System architecture (agents and RAG)](#system-architecture-agents-and-rag)
+- [RAG data source](#rag-data-source)
+- [Tool functions](#tool-functions)
+- [Stakeholders and use cases](#stakeholders-and-use-cases)
+- [Data summary](#data-summary)
+- [Technical details](#technical-details)
+- [Usage instructions](#usage-instructions)
+- [Error handling](#error-handling)
+- [Troubleshooting](#troubleshooting)
+- [Data sources](#data-sources)
 
 ---
 
-## ⚙️ How It Works
+## What this tool does
 
-### Process Flow
+This app is a news coverage analyzer that pulls article data from The Guardian API and shows how different countries get media attention. You pick countries (ten options including the US, UK, China, and Australia) and a date range, then it fetches articles that mention those countries and shows interactive charts: bar charts for raw counts and per-capita coverage (so smaller countries still show up fairly), plus pie and stacked bar charts for topics grouped into Politics, Culture, Crisis, Sport, Business, and Science. The app sends aggregated data to **Ollama Cloud** (`gpt-oss:20b-cloud`) to produce a formal analytical report with percentages and two deep insights, aimed at readers like journalists or researchers.
+
+**Ask The Guardian** sits at the top of the page: you ask a question in plain English with your *own* country and time window (for example last week or yesterday). That flow does **not** use the sidebar dates. An LLM plans the request, calls a tool to fetch matching Guardian articles, embeds them, runs **semantic search**, then a second LLM answers using only the retrieved excerpts. **Sources** (headlines and links) appear below the answer; the answer text is prompted to stay free of inline citation markers.
+
+### Core capabilities
+
+| Area | Feature | What it does |
+|------|---------|--------------|
+| API | **Guardian integration** | GET `/search` per country and date range |
+| Dashboard | **Shiny UI** | Value boxes, Plotly charts, filterable tables |
+| AI report | **Coverage analysis** | Cloud LLM reads summarized dashboard data |
+| Chatbot | **Multi-agent + RAG** | Tool-based fetch, embeddings, top-k similarity, then analyst LLM |
+| Indexing | **Dashboard RAG** | After Fetch Data, builds `dashboard_rag.db` with headline + trail text for the sidebar range |
+
+---
+
+## Extended system description (project write-up)
+
+This app is basically a news coverage analyzer that pulls article data from The Guardian API and shows you how different countries are getting media attention. You can pick which countries you want to analyze, there are ten options like the US, UK, China, and Australia, and set a date range, then it fetches all the articles mentioning those countries and displays them through interactive charts. The main visualizations are bar graphs showing raw article counts and per-capita coverage. I chose per-capita because it adjusts for population size so smaller countries still get seen in the charts, plus pie charts and stacked bar charts showing how topics break down across Politics, Culture, Crisis, Sport, Business, and Science. The app connects to a cloud Ollama model running gpt-oss, sends all the processed data, and the model writes up an analytical report with actual insights instead of just repeating the numbers back at you. For example it can look at why we might be seeing more coverage in one country than another, whether it is due to The Guardian’s editorial focus, or if a major event happened in that area. The prompt asks for formal language, specific percentages, and two deep insights with implications, assuming the reader is a journalist or a scientist.
+
+Internally the app uses The Guardian API, which gives access to their published content. Each time you click Fetch Data, the app sends a GET request to the `/search` endpoint for each country you selected in the sidebar for the given date range. The API returns JSON with article metadata like the title, section, publication date, and URL. The app processes the data by classifying articles into topics and calculating per-capita coverage by dividing article counts by population numbers that are hardcoded in the code.
+
+The trickiest part was getting all the components to work together on one site. When I combined earlier labs, weird bugs showed up, like some charts would not render unless I clicked Fetch Data twice. That turned out to be a Shiny reactivity issue where data was not passed to the charts correctly on the first click, so I kept a small double-click workaround. I also tried to change the layout so everything feels like one cohesive page. I do not have much design experience, so I iterated with AI feedback on screenshots and mixed ideas until the UI felt consistent. I added error handling for missing API keys, rate limits, and network failures so the app would not just crash.
+
+On top of that I added Ask The Guardian, which ignores the sidebar dates on purpose. You type a question in natural language and two agent steps run in Python. The first agent is a query planner: it must call a tool that hits the Guardian API with one country from the allowed list and concrete `from_date` and `to_date` values, so phrases like last week get turned into real calendar bounds. The tool returns articles with headline, trail text, and short URL. Those records are embedded with sentence-transformers, stored in a temporary sqlite-vec table, and the user question is embedded the same way so we can run a k-nearest neighbor style similarity search and keep the top matches. A second agent reads only those excerpts and writes the answer. The UI lists sources in separate cards so readers can click through, and the system prompt tells the model not to paste bracketed headlines or markdown links inside the prose. When you Fetch Data for the dashboard, the app also builds a vector index on disk (`dashboard_rag.db`) using the same RAG fields for the sidebar range, which keeps one consistent pipeline for embeddings even though the chatbot builds a fresh in-memory index per question.
+
+New design challenges showed up with Ollama Cloud tool calling, because the API returns structured tool calls that Python has to execute locally and then you still need a second plain chat call for the final answer. The embedding model is a one-time download and the first run can feel slow. The planner can mis-guess dates if the question is vague, so the system prompt spells out how to interpret yesterday and last week and which country strings are valid. Getting the analyst prompt right so the text stays clean while the Sources panel still carries trust took a few iterations.
+
+---
+
+## How it works
+
+### Dashboard data flow
 
 ```mermaid
 flowchart LR
     subgraph Input
-        A[🗞️ Guardian API<br>Article Data]
+        A[Guardian API article data]
     end
 
     subgraph Processing
-        B[📊 SUMMARIZE<br>Aggregate counts<br>by country]
-        C[🔍 INTERPRET<br>Rank coverage,<br>calculate per-capita,<br>categorize topics]
-        D[📝 FORMAT<br>Generate charts,<br>tables, statistics]
+        B[Summarize counts by country]
+        C[Rank coverage, per-capita, topics]
+        D[Build charts and tables]
     end
 
     subgraph Output
-        E[📈 Coverage Report<br>Interactive Dashboard]
+        E[Interactive dashboard]
     end
 
     A --> B --> C --> D --> E
 ```
 
-### User Interaction Sequence
+### User sequence (sidebar + AI report)
 
 ```mermaid
 sequenceDiagram
-    participant 👤 User
-    participant 🖥️ Shiny App
-    participant 🗞️ Guardian API
-    participant 🤖 Ollama AI
+    participant User
+    participant ShinyApp
+    participant GuardianAPI
+    participant OllamaCloud
 
-    👤 User->>🖥️ Shiny App: Set date range, select countries
-    👤 User->>🖥️ Shiny App: Click "Fetch Data"
-    loop For each selected country
-        🖥️ Shiny App->>🗞️ Guardian API: GET /search?q=country&from-date=...
-        🗞️ Guardian API-->>🖥️ Shiny App: JSON with articles + total count
+    User->>ShinyApp: Set dates and countries
+    User->>ShinyApp: Click Fetch Data
+    loop Each selected country
+        ShinyApp->>GuardianAPI: GET /search
+        GuardianAPI-->>ShinyApp: JSON results and totals
     end
-    🖥️ Shiny App->>🖥️ Shiny App: Classify topics, calculate per-capita
-    🖥️ Shiny App-->>👤 User: Render charts, tables, value boxes
-    👤 User->>🖥️ Shiny App: Click "Generate AI Report"
-    🖥️ Shiny App->>🤖 Ollama AI: Send formatted data + prompt
-    🤖 Ollama AI-->>🖥️ Shiny App: Analytical report with insights
-    🖥️ Shiny App-->>👤 User: Display AI-generated analysis
+    ShinyApp->>ShinyApp: Classify topics, per-capita, optional RAG index file
+    ShinyApp-->>User: Charts and tables
+    User->>ShinyApp: Click Generate AI Report
+    ShinyApp->>OllamaCloud: POST /api/chat with summary text
+    OllamaCloud-->>ShinyApp: Markdown report
+    ShinyApp-->>User: Render report
 ```
 
-### What the System Returns
+### Ask The Guardian (multi-agent + RAG)
 
-| Step | Function | Output |
-|:----:|----------|--------|
-| 1 | **SUMMARIZE** | Article counts per country, total coverage volume |
-| 2 | **INTERPRET** | Rankings, per-capita metrics, topic breakdown, coverage gaps |
-| 3 | **FORMAT** | Bar charts, pie charts, data tables, summary statistics |
-| 4 | **ANALYZE** | AI-generated insights, patterns, and implications |
+```mermaid
+sequenceDiagram
+    participant User
+    participant ShinyApp
+    participant OllamaCloud
+    participant GuardianAPI
+    participant RAG as Embeddings and sqlite-vec
+
+    User->>ShinyApp: Type question, click Search
+    ShinyApp->>OllamaCloud: Agent 1 with tool metadata
+    OllamaCloud-->>ShinyApp: tool_call search_guardian_articles
+    ShinyApp->>GuardianAPI: GET /search (country, dates)
+    GuardianAPI-->>ShinyApp: Articles with fields for RAG
+    ShinyApp->>RAG: Embed chunks, vector index, top-k search
+    ShinyApp->>OllamaCloud: Agent 2 with retrieved context
+    OllamaCloud-->>ShinyApp: Answer text
+    ShinyApp-->>User: Answer plus source cards
+```
 
 ---
 
-## 👥 Stakeholders and Use Cases
+## System architecture (agents and RAG)
 
-### Who Benefits
+| Role | Where it lives | Responsibility |
+|------|----------------|----------------|
+| **Agent 1 (query planner)** | `app.py` → `run_guardian_chatbot()` | Reads the user question, calls Ollama Cloud with `tool_search_guardian_articles`, receives a tool call, runs `search_guardian_articles` locally |
+| **Tool** | `agent_workflow.py` | `search_guardian_articles` wraps `rag_guardian.query_guardian` |
+| **RAG pipeline** | `rag_guardian.py` + `app.py` | `build_index`, `search`: sentence-transformers `all-MiniLM-L6-v2`, cosine distance in sqlite-vec |
+| **Agent 2 (analyst)** | `app.py` → `run_guardian_chatbot()` | Second `cloud_agent_run` with no tools; user message contains question plus formatted excerpts |
+| **Dashboard RAG** | `app.py` → `fetch_data()` | After a successful fetch, aggregates RAG-field articles and writes `dashboard_rag.db` |
+
+Orchestration helpers (`cloud_agent`, `cloud_agent_run`) live in **`agent_workflow.py`** and post to `https://ollama.com/api/chat` with a bearer token.
+
+---
+
+## RAG data source
+
+| Item | Detail |
+|------|--------|
+| **API** | Same Guardian Open Platform `GET https://content.guardianapis.com/search` |
+| **Query** | `q` = country name; `from-date`, `to-date`; `page-size` = 50 |
+| **Fields for RAG** | `show-fields=wordcount,trailText,headline,shortUrl` (see `rag_guardian.query_guardian`) |
+| **Chunk text** | `headline` + ` \| ` + `trail_text` (HTML stripped from trail) |
+| **Embedding model** | `all-MiniLM-L6-v2` (384 dimensions) via `sentence-transformers` |
+| **Vector store** | `sqlite-vec` virtual table `vec_chunks`, metadata in `chunks` |
+| **Search function** | `rag_guardian.search(conn, query, k=5)` embeds the query and returns the closest rows with scores |
+| **Chatbot index** | In-memory SQLite database per question |
+| **Dashboard index** | File `04_deployment/app/dashboard_rag.db` after each successful Fetch Data |
+
+---
+
+## Tool functions
+
+| Tool name | Purpose | Parameters | Returns |
+|-----------|---------|------------|---------|
+| `search_guardian_articles` | Fetch Guardian articles for chatbot RAG (headline, trail, URL, section, date) | `country` (must be one of the ten app countries), `from_date` (YYYY-MM-DD), `to_date` (YYYY-MM-DD) | `list` of article `dict`s, or a one-element list with `error` on failure |
+| `get_guardian_coverage` | Standalone demo: topic mix and per-capita summary for one country and range | Same three strings as above | `pandas.DataFrame` of topic counts and percentages (used when you run `python agent_workflow.py`) |
+
+Tool **metadata** (JSON schema for the LLM) is in **`agent_workflow.py`**: `tool_search_guardian_articles`, `tool_get_guardian_coverage`. The chat UI only registers `search_guardian_articles`.
+
+---
+
+## Stakeholders and use cases
 
 | Stakeholder | Need |
 |-------------|------|
-| 📰 **Journalist / Editor** | Identify geographic blind spots in publication coverage |
-| 🔬 **Policy Researcher** | Structured country-level media attention data for analysis |
-| 🎓 **Student / Educator** | Learn about media patterns and global news distribution |
-
-### Needs → Goals Mapping
-
-```mermaid
-flowchart LR
-    subgraph Stakeholders
-        S1[📰 Journalist<br>needs coverage gaps]
-        S2[🔬 Researcher<br>needs structured data]
-        S3[🎓 Student<br>needs learning tool]
-    end
-
-    subgraph System Goals
-        G1[📊 SUMMARIZE<br>article counts]
-        G2[🔍 INTERPRET<br>rank & patterns]
-        G3[📝 FORMAT<br>tables & charts]
-        G4[🤖 ANALYZE<br>AI insights]
-    end
-
-    S1 --> G1
-    S1 --> G2
-    S2 --> G1
-    S2 --> G3
-    S3 --> G3
-    S3 --> G4
-```
+| Journalist / editor | Spot geographic gaps in coverage |
+| Policy researcher | Structured country-level attention metrics |
+| Student / educator | Learn how APIs, dashboards, and LLM tooling fit together |
 
 ---
 
-## 📊 Data Summary
+## Data summary
 
-### Article Data (from Guardian API)
-
-| Column | Data Type | Description |
-|--------|:---------:|-------------|
-| `country` | string | Country name used in the search query |
-| `title` | string | Article headline (`webTitle` from API) |
-| `section` | string | Guardian section name (e.g., "World news", "Sport") |
-| `section_id` | string | Machine-readable section identifier for topic classification |
-| `topic` | string | Derived category: Politics, Culture, Crisis, Sport, Business, Science, Other |
-| `pillar` | string | Guardian pillar: News, Opinion, Sport, Arts, Lifestyle |
-| `wordcount` | integer | Article word count (indicates depth of coverage) |
-| `date` | string | Publication date in YYYY-MM-DD format |
-| `url` | string | Full URL to the article on The Guardian website |
-
-### Summary Data (computed by app)
-
-| Column | Data Type | Description |
-|--------|:---------:|-------------|
-| `country` | string | Country name |
-| `total_articles` | integer | Total articles mentioning the country |
-| `population_m` | float | Country population in millions (reference data) |
-| `articles_per_1m` | float | Coverage intensity: articles per million people |
-
-### Topic Classification
-
-The app maps Guardian `sectionId` values to six broad topics:
-
-| Topic | Sections Included |
-|-------|-------------------|
-| 🏛️ **Politics** | politics, world, us-news, uk-news, australia-news, law, global |
-| 🎭 **Culture** | culture, music, film, books, artanddesign, stage, tv-and-radio, games, food |
-| ⚠️ **Crisis** | environment, global-development, society, inequality |
-| ⚽ **Sport** | sport, football, cricket, rugby-union, tennis, cycling, formulaone |
-| 💼 **Business** | business, technology, money, media |
-| 🔬 **Science** | science, lifeandstyle, education |
-| 📰 **Other** | Anything not listed above |
+Dashboard tables use the columns described in earlier sections (`title`, `topic`, `wordcount`, etc.). RAG rows additionally rely on `headline`, `trail_text`, and `short_url` from the Guardian `show-fields` response.
 
 ---
 
-## 🔧 Technical Details
+## Technical details
 
-### API Configuration
-
-| Setting | Value |
-|---------|-------|
-| **Provider** | The Guardian Open Platform |
-| **Base URL** | `https://content.guardianapis.com/search` |
-| **Method** | GET (REST API) |
-| **Authentication** | API key as `api-key` query parameter |
-| **Rate Limit** | 12 requests/second, 5,000/day (free tier) |
-
-### Query Parameters
-
-| Parameter | Example Value | Purpose |
-|-----------|---------------|---------|
-| `q` | `"United States"` | Search term (country name) |
-| `from-date` | `2026-01-01` | Start of date range |
-| `to-date` | `2026-01-31` | End of date range |
-| `page-size` | `50` | Max articles per request |
-| `show-fields` | `wordcount` | Additional fields to retrieve |
-| `api-key` | `your-key-here` | Authentication |
-
-**Example Request:**
-```
-https://content.guardianapis.com/search?q=Japan&from-date=2026-01-01&to-date=2026-01-31&page-size=50&show-fields=wordcount&api-key=YOUR_KEY
-```
-
-### Ollama AI Configuration
+### Guardian API
 
 | Setting | Value |
 |---------|-------|
-| **Host** | `http://localhost:11434` |
-| **Endpoint** | `/api/generate` |
-| **Model** | `gemma3:latest` |
-| **Timeout** | 120 seconds |
+| Base URL | `https://content.guardianapis.com/search` |
+| Method | GET |
+| Auth | `api-key` query parameter |
 
-### AI Prompt Design
+Dashboard requests use `show-fields=wordcount`. RAG paths use `wordcount,trailText,headline,shortUrl`.
 
-| Element | Description |
-|---------|-------------|
-| **Role** | Media analyst specializing in global news coverage |
-| **Chain-of-Thought** | 6-step reasoning: volume → per-capita → depth → tone → factors → conclusions |
-| **Constraints** | Formal language, no hyperbole, specific numbers/percentages |
-| **Output Format** | Key Statistics (3-4 bullets), 2 Deep Insights, Implications |
+### Ollama Cloud
 
-### File Structure
-All you need to run this program is .env and 04_deployment/app/
+| Setting | Value |
+|---------|-------|
+| URL | `https://ollama.com/api/chat` |
+| Auth | `Authorization: Bearer <OLLAMA_API_KEY>` |
+| Default model | `gpt-oss:20b-cloud` (set in `app.py` and `agent_workflow.py`) |
+
+### Environment variables (project root `.env`)
+
+```env
+GUARDIAN_API_KEY=your_guardian_key
+OLLAMA_API_KEY=your_ollama_cloud_key
+```
+
+### File structure
+
 ```
 dsai/
-├── .env                           # 🔑 API keys (GUARDIAN_API_KEY)
-├── 01_query_api/
-│   ├── 03_guardian_api.py         # Basic Guardian API query
-│   └── 04_geographic_attention.py # Multi-country analysis script
-├── 02_productivity/
-│   └── app/
-│       └── app.py                 # Shiny dashboard (no AI)
-├── 03_query_ai/
-│   ├── 06_ai_reporter.py          # AI reporting script
-│   └── README_geographic_attention.md
+├── .env
 └── 04_deployment/
     └── app/
-        ├── app.py                 # 🚀 Main integrated application
-        ├── requirements.txt       # Python dependencies
-        └── README.md              # This documentation
+        ├── app.py                 # Main Shiny app, chatbot orchestration, fetch_data + dashboard RAG
+        ├── rag_guardian.py        # query_guardian, embed, build_index, search, reset_rag_schema, CLI
+        ├── agent_workflow.py      # cloud_agent_run, tools, optional CLI demo
+        ├── dashboard_rag.db       # Created after Fetch Data (optional: add to .gitignore)
+        ├── requirements.txt
+        └── README.md              # This file
 ```
 
 ### Dependencies
 
 | Package | Purpose |
 |---------|---------|
-| `shiny` | Web application framework |
-| `pandas` | Data manipulation and aggregation |
-| `plotly` | Interactive chart visualizations |
-| `requests` | HTTP requests to Guardian API and Ollama |
-| `python-dotenv` | Load API key from .env file |
-| `python-dateutil` | Date calculations (relativedelta) |
+| `shiny` | Web app |
+| `pandas` | Data frames |
+| `plotly` | Charts |
+| `requests` | HTTP |
+| `python-dotenv` | Load `.env` |
+| `python-dateutil` | Dates |
+| `sentence-transformers` | Embeddings for RAG |
+| `sqlite-vec` | Vector similarity in SQLite |
 
 ---
 
-## 🚀 Usage Instructions
+## Usage instructions
 
-### Prerequisites Checklist
+### Prerequisites
 
-- [ ] Python 3.9+ installed
-- [ ] pip package manager available
-- [ ] Guardian API key (free registration)
-- [ ] Ollama installed (optional, for AI features)
+- Python 3.10+ recommended
+- Guardian API key ([open-platform.theguardian.com/access](https://open-platform.theguardian.com/access/))
+- Ollama Cloud API key for AI report and Ask The Guardian ([ollama.com](https://ollama.com))
 
-### Step 1: Install Dependencies
+### Install
 
 ```bash
 cd 04_deployment/app
 pip install -r requirements.txt
 ```
 
-**Expected output:** Successfully installed shiny, pandas, plotly, requests, python-dotenv, python-dateutil
+The first time you run anything that embeds text, `sentence-transformers` may download `all-MiniLM-L6-v2` (wait for it to finish).
 
-### Step 2: Get Your Guardian API Key
+### Configure `.env`
 
-1. Go to [open-platform.theguardian.com/access](https://open-platform.theguardian.com/access/)
-2. Click **"Register for a developer key"**
-3. Fill out the form with your email
-4. Check your email for the API key
-5. Create a `.env` file in the project root (`dsai/.env`):
+At the **repository root** (parent of `04_deployment`), create or edit `.env`:
 
 ```env
-GUARDIAN_API_KEY=your_api_key_here
+GUARDIAN_API_KEY=your_key_here
+OLLAMA_API_KEY=your_ollama_cloud_key_here
 ```
 
-### Step 3: Set Up Ollama (Optional)
-
-If you want AI-generated reports:
-
-```bash
-# Download Ollama from https://ollama.ai/
-
-# Pull the model (first time only, ~2GB download)
-ollama pull gemma3:latest
-
-# Start the server (keep this running in a separate terminal)
-ollama serve
-```
-
-### Step 4: Run the Application
+### Run
 
 ```bash
 cd 04_deployment/app
 shiny run app.py
 ```
 
-**Expected output:**
+Open the URL Shiny prints (often `http://127.0.0.1:8000`).
+
+### Using the UI
+
+1. **Sidebar** — Set dates and countries, click **Fetch Data** (charts may rely on the app double-click workaround on the first run).
+2. **Charts and tables** — Explore coverage.
+3. **Generate AI Report** — Summarizes the current fetch using Ollama Cloud.
+4. **Ask The Guardian** — Enter a free-form question, click **Search**. Check **Sources** under the answer for links.
+
+### Optional: CLI RAG script
+
+```bash
+cd 04_deployment/app
+python rag_guardian.py
 ```
-Uvicorn running on http://127.0.0.1:8000
+
+### Optional: standalone agent demo
+
+```bash
+cd 04_deployment/app
+python agent_workflow.py
 ```
 
-Open your browser to `http://localhost:8000`
-
-### Step 5: Use the Dashboard
-
-1. ⚙️ **Set Date Range** — Adjust "From Date" and "To Date" in the sidebar
-2. 🌍 **Select Countries** — Check/uncheck countries to analyze (default: all 10)
-3. 🔄 **Fetch Data** — Click the "Fetch Data" button to query the API
-4. 📊 **Explore Visualizations** — View charts and tables that update automatically
-5. 🤖 **Generate AI Report** — Click "Generate AI Report" for LLM-powered analysis
-
-### Quick Test Checklist
-
-After running, verify these work:
-
-- [ ] Value boxes show numbers (not dashes)
-- [ ] Bar charts display colored bars
-- [ ] Pie chart shows topic distribution
-- [ ] Data tables are populated and filterable
-- [ ] AI report generates (if Ollama is running)
+Uses `get_guardian_coverage` + a second cloud call (imports `df_as_text` from the course `08_function_calling` folder for the demo table).
 
 ---
 
-## 🛡️ Error Handling
+## Error handling
 
-The application handles errors gracefully with visual feedback:
-
-| Error Type | Visual Indicator | What Happens |
-|------------|------------------|--------------|
-| 🔴 Missing API key | Red alert banner | Queries disabled until .env is configured |
-| 🔴 Invalid API key | Red error in charts | 401 status message displayed |
-| 🔴 Rate limit exceeded | Red error in charts | 429 status with retry suggestion |
-| 🔴 Network timeout | Red error in charts | 15-second timeout with retry message |
-| 🟡 Partial failures | Yellow warning banner | Shows which countries failed and why |
-| 🔴 Ollama not running | Error in AI section | Friendly instructions to start Ollama |
-| 🔴 Date range invalid | Red error in charts | Message to fix from/to dates |
+| Situation | What you see |
+|-----------|----------------|
+| Missing `GUARDIAN_API_KEY` | Red notification; queries blocked |
+| Missing `OLLAMA_API_KEY` | Warning notification; AI report and chatbot fail gracefully |
+| Guardian 401 / 429 / timeout | Messages in banners or chat result |
+| Partial country failures | Yellow warning on dashboard |
+| Planner never calls the tool | Chatbot shows a message to name a country and time range |
+| RAG index build fails on fetch | Blue info banner with `rag_warning`; charts may still work |
 
 ---
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| **"GUARDIAN_API_KEY not found"** | Create `.env` file in `dsai/` folder with `GUARDIAN_API_KEY=your_key` |
-| **"Could not connect to Ollama"** | Run `ollama serve` in a separate terminal window |
-| **"Model not found"** | Run `ollama pull gemma3:latest` to download the model |
-| **Charts show "Click Fetch Data"** | Click the blue "Fetch Data" button in the sidebar |
-| **Only some countries loaded** | Check the yellow warning banner for specific errors |
-| **Slow AI response** | Normal — Ollama may take 30-60 seconds on first generation |
-| **Import errors when running** | Run `pip install -r requirements.txt` in the app folder |
-| **Port 8000 in use** | Run `shiny run app.py --port 8001` to use a different port |
+| Issue | What to try |
+|-------|-------------|
+| Chatbot says planner failed | Confirm `OLLAMA_API_KEY`, network, and that your question mentions a valid country name |
+| No sources listed | API returned no articles for the inferred dates; rephrase with explicit dates |
+| Embedding errors | Reinstall `sentence-transformers` and `sqlite-vec`; ensure disk space |
+| `sqlite-vec` load errors on Windows | Install a build that matches your Python version; see package docs |
+| Port in use | `shiny run app.py --port 8001` |
 
 ---
 
-## 📚 Data Sources
+## Data sources
 
 | Source | Usage |
-|--------|-------|
-| [The Guardian Open Platform API](https://open-platform.theguardian.com/) | News article data |
-| Wikipedia (2024 figures) | Country population estimates |
-| Ollama / Gemma 3 | AI-generated analysis |
+|--------|--------|
+| [The Guardian Open Platform](https://open-platform.theguardian.com/) | Article metadata and text fields |
+| Hardcoded population table in `app.py` | Per-capita rates |
+| Ollama Cloud | AI report and both chatbot LLM steps |
 
 ---
 
-
-*Built with Shiny for Python, Plotly, and Ollama*
+### End-to-end dashboard diagram
 
 ```mermaid
 %%{init: {
@@ -392,50 +350,49 @@ The application handles errors gracefully with visual feedback:
   }
 }}%%
 flowchart TD
-  subgraph UI["👤 User Input"]
+  subgraph UI[User input]
     direction TB
-    countries["Select Countries"]
-    dates["Set Date Range"]
-    fetch["Click Fetch Data"]
+    countries[Select countries]
+    dates[Set date range]
+    fetch[Click Fetch Data]
 
     countries --> fetch
     dates --> fetch
   end
 
-  subgraph API["🖊️ Guardian API"]
+  subgraph API[Guardian API]
     direction TB
-    search["GET /search endpoint"]
-    articles["Returns JSON with articles"]
+    search[GET /search]
+    articles[JSON articles]
 
     search --> articles
   end
 
-  subgraph DP["⚙️ Data Processing"]
+  subgraph DP[Data processing]
     direction TB
-    parse["Parse article metadata"]
-    classify["Classify topics by section"]
-    percap["Calculate per-capita coverage"]
-    agg["Aggregate counts & statistics"]
+    parse[Parse metadata]
+    classify[Classify topics]
+    percap[Per-capita coverage]
+    agg[Aggregate stats]
 
     parse --> classify --> percap --> agg
   end
 
-  subgraph AI["🤖 AI Analysis"]
+  subgraph AI[AI analysis]
     direction TB
-    format["Format data as structured text"]
-    ollama["Send to Ollama with prompt"]
-    report["Generate analytical report"]
-    insights["Display insights & implications"]
+    format[Format summary text]
+    ollama[Ollama Cloud chat]
+    report[Analytical report]
 
-    format --> ollama --> report --> insights
+    format --> ollama --> report
   end
 
-  subgraph VIZ["📊 Visualization"]
+  subgraph VIZ[Visualizations]
     direction LR
-    value["Value Boxes: totals & top country"]
-    bar["Bar Charts: counts & per-capita"]
-    pie["Pie/Stacked Charts: topic breakdown"]
-    table["Data Tables: filterable details"]
+    value[Value boxes]
+    bar[Bar charts]
+    pie[Pie and stacked charts]
+    table[Data tables]
   end
 
   fetch --> search
@@ -448,7 +405,7 @@ flowchart TD
   agg --> table
 
   classDef node fill:#1f1f1f,stroke:#1f1f1f,color:#f2f2f2;
-  class countries,dates,fetch,search,articles,parse,classify,percap,agg,format,ollama,report,insights,value,bar,pie,table node;
+  class countries,dates,fetch,search,articles,parse,classify,percap,agg,format,ollama,report,value,bar,pie,table node;
 
   style UI fill:#53565a,stroke:#53565a,color:#f2f2f2
   style API fill:#53565a,stroke:#53565a,color:#f2f2f2
@@ -456,3 +413,5 @@ flowchart TD
   style AI fill:#53565a,stroke:#53565a,color:#f2f2f2
   style VIZ fill:#53565a,stroke:#53565a,color:#f2f2f2
 ```
+
+*Built with Shiny for Python, Plotly, sentence-transformers, sqlite-vec, and Ollama Cloud.*
