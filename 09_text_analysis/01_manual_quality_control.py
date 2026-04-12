@@ -20,7 +20,7 @@ import re  # for string pattern matching and text analysis
 
 # Load sample AI-generated report text
 # This text should be checked for quality and accuracy
-with open("09_text_analysis/data/sample_reports.txt", "r", encoding="utf-8") as f:
+with open("C:/Users/nairv/Downloads/classes/dsai/09_text_analysis/data/sample_reports.txt", "r", encoding="utf-8") as f:
     sample_text = f.read()
 
 # Split text into individual reports (reports are separated by blank lines)

@@ -23,7 +23,7 @@ import pingouin as pg
 
 # Load pre-computed quality control scores for reports from 3 different prompts
 # Each prompt generated 30 reports, and each report was evaluated on multiple criteria
-scores = pd.read_csv("09_text_analysis/data/prompt_comparison_scores.csv")
+scores = pd.read_csv("C:/Users/nairv/Downloads/classes/dsai/09_text_analysis/data/prompt_comparison_scores.csv")
 
 # View the data structure
 print("📊 Quality Control Scores Dataset:")
@@ -108,8 +108,9 @@ print("📋 T-Test Results:")
 print(t_test_result)
 print()
 
-# Extract p-value
-p_value = t_test_result['p-val'].values[0]
+# Extract p-value (column name is p_val in current pingouin; older versions used p-val)
+_p_col = 'p_val' if 'p_val' in t_test_result.columns else 'p-val'
+p_value = t_test_result[_p_col].values[0]
 
 # Interpret the result
 print("💡 Interpretation:")
@@ -143,9 +144,10 @@ print("\n📋 ANOVA Results:")
 print(anova_result)
 print()
 
-# Extract F-statistic and p-value
+# Extract F-statistic and p-value (pingouin uses p_unc in current releases; older used p-unc)
+_anova_p_col = 'p_unc' if 'p_unc' in anova_result.columns else 'p-unc'
 f_statistic = anova_result['F'].values[0]
-p_value = anova_result['p-unc'].values[0]
+p_value = anova_result[_anova_p_col].values[0]
 
 print(f"📊 F-statistic: {f_statistic:.4f}")
 print(f"📊 p-value: {p_value:.4f}\n")
