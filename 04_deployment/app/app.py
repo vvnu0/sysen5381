@@ -13,8 +13,16 @@
 ## 0.1 Load Packages ############################
 
 import os
+import sys
 import json
 from pathlib import Path
+
+# Posit Connect (and some Shiny hosts) load this file as a module, so the app
+# directory may not be on sys.path. Sibling modules rag_guardian / agent_workflow
+# must resolve from the same folder as app.py.
+_APP_DIR = Path(__file__).resolve().parent
+if str(_APP_DIR) not in sys.path:
+    sys.path.insert(0, str(_APP_DIR))
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 

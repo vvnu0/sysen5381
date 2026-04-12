@@ -15,16 +15,22 @@
   },
   "files": {
     "requirements.txt": {
-      "checksum": "74a7e43e2e8504b49ed0264a697f7057"
+      "checksum": "4e2a1490766183a6c8c850c5c17a30aa"
     },
     "README.md": {
-      "checksum": "d7cb1bbb9908d584d6a2a7429071df40"
+      "checksum": "e4e04aefecdee6540196847dfedbd28f"
+    },
+    "agent_workflow.py": {
+      "checksum": "7fe870ed43695156103ef715b86efbe3"
     },
     "app.py": {
-      "checksum": "e47b491f1642d047b4b608376b1fdf60"
+      "checksum": "51a7c959f939d2e2a685281cea61ff09"
     },
     "manifestme.sh": {
       "checksum": "07b5def597660febf7226fa9873954f9"
+    },
+    "rag_guardian.py": {
+      "checksum": "bdc011009c6726c27f9b7eff9c8be66c"
     }
   }
 }
