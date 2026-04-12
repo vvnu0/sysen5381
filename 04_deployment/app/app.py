@@ -300,6 +300,10 @@ OUTPUT FORMAT:
 
 DASHBOARD_RAG_DB = Path(__file__).resolve().parent / "dashboard_rag.db"
 _dashboard_rag_conn = None
+# True after a successful Fetch Data (data + RAG path). Chatbot skips lazy RAG seeding then.
+_fetch_succeeded_once = False
+# True after chatbot ran one lazy dashboard RAG build (so we do not repeat every Search click).
+_chat_seeded_dashboard_rag = False
 
 
 def _close_dashboard_rag():
@@ -311,6 +315,59 @@ def _close_dashboard_rag():
         except Exception:
             pass
         _dashboard_rag_conn = None
+
+
+def rebuild_dashboard_rag_index(selected, from_date, to_date):
+    """
+    Build or replace dashboard_rag.db using RAG fields for the given countries and dates.
+    Returns a dict with optional keys rag_chunks (int) or rag_warning (str).
+    """
+    global _dashboard_rag_conn
+    out = {}
+    if not GUARDIAN_API_KEY:
+        out["rag_warning"] = "RAG index skipped: no Guardian API key."
+        return out
+    if not selected:
+        out["rag_warning"] = "RAG index skipped: no countries selected."
+        return out
+    if from_date >= to_date:
+        out["rag_warning"] = "RAG index skipped: invalid date range."
+        return out
+    try:
+        _close_dashboard_rag()
+        rag_articles = []
+        for country in selected:
+            arts, _, rag_err = rag_query_guardian(country, from_date, to_date, GUARDIAN_API_KEY)
+            if not rag_err and arts:
+                rag_articles.extend(arts)
+        if rag_articles:
+            if DASHBOARD_RAG_DB.exists():
+                DASHBOARD_RAG_DB.unlink()
+            _dashboard_rag_conn = rag_connect_db(str(DASHBOARD_RAG_DB))
+            reset_rag_schema(_dashboard_rag_conn)
+            build_index(_dashboard_rag_conn, rag_articles)
+            out["rag_chunks"] = len(rag_articles)
+        else:
+            out["rag_warning"] = "No RAG articles indexed (empty API results)."
+    except Exception as ex:
+        out["rag_warning"] = f"RAG index not built: {ex}"
+    return out
+
+
+def _lazy_seed_dashboard_rag(sidebar_countries, sidebar_from_date, sidebar_to_date):
+    """
+    If Fetch Data has never succeeded, build dashboard RAG once from sidebar inputs.
+    Returns rag_info dict for meta, or None if skipped.
+    """
+    global _chat_seeded_dashboard_rag
+    if _fetch_succeeded_once or _chat_seeded_dashboard_rag:
+        return None
+    if not sidebar_countries or not sidebar_from_date or not sidebar_to_date:
+        return None
+    _chat_seeded_dashboard_rag = True
+    return rebuild_dashboard_rag_index(
+        sidebar_countries, sidebar_from_date, sidebar_to_date
+    )
 
 
 def _extract_articles_from_planner(result1):
@@ -334,10 +391,17 @@ def _extract_articles_from_planner(result1):
     )
 
 
-def run_guardian_chatbot(user_question):
+def run_guardian_chatbot(
+    user_question,
+    sidebar_countries=None,
+    sidebar_from_date=None,
+    sidebar_to_date=None,
+):
     """
     Multi-agent + RAG: (1) LLM calls search_guardian_articles for country/dates,
     (2) embed articles and KNN search, (3) LLM answers with citations.
+    If Fetch Data has never succeeded, a successful search also seeds dashboard_rag.db
+    from the current sidebar countries and date range (lazy init).
     Returns dict with keys: ok, answer, sources, meta, error.
     """
     if not OLLAMA_API_KEY:
@@ -393,12 +457,18 @@ def run_guardian_chatbot(user_question):
                 pass
 
     if not hits:
+        meta_empty = {}
+        rag_lazy = _lazy_seed_dashboard_rag(
+            sidebar_countries, sidebar_from_date, sidebar_to_date
+        )
+        if rag_lazy:
+            meta_empty["dashboard_rag_lazy"] = rag_lazy
         return {
             "ok": True,
             "answer": "No articles matched your question semantically in the retrieved set. "
             "Try a broader date range or different wording.",
             "sources": [],
-            "meta": {},
+            "meta": meta_empty,
         }
 
     context_parts = []
@@ -437,6 +507,12 @@ def run_guardian_chatbot(user_question):
         "articles_fetched": len(articles),
         "sources_used": len(hits),
     }
+    rag_lazy = _lazy_seed_dashboard_rag(
+        sidebar_countries, sidebar_from_date, sidebar_to_date
+    )
+    if rag_lazy:
+        meta["dashboard_rag_lazy"] = rag_lazy
+
     return {"ok": True, "answer": answer, "sources": hits, "meta": meta}
 
 
@@ -747,7 +823,7 @@ with ui.sidebar(open="desktop", width=300):
 @reactive.event(input.run_query)
 def fetch_data():
     """Query Guardian API for each selected country when button is clicked."""
-    global _dashboard_rag_conn
+    global _dashboard_rag_conn, _fetch_succeeded_once
     try:
         # Check for API key
         if not GUARDIAN_API_KEY:
@@ -815,26 +891,10 @@ def fetch_data():
             warning_detail = "; ".join(error_messages) if error_messages else ", ".join(failed_countries)
             result["warning"] = f"Partial failure: {warning_detail}"
 
-        # Build semantic RAG index for sidebar date range (headlines + trail text)
-        try:
-            _close_dashboard_rag()
-            rag_articles = []
-            for country in selected:
-                arts, _, rag_err = rag_query_guardian(country, from_date, to_date, GUARDIAN_API_KEY)
-                if not rag_err and arts:
-                    rag_articles.extend(arts)
-            if rag_articles:
-                if DASHBOARD_RAG_DB.exists():
-                    DASHBOARD_RAG_DB.unlink()
-                _dashboard_rag_conn = rag_connect_db(str(DASHBOARD_RAG_DB))
-                reset_rag_schema(_dashboard_rag_conn)
-                build_index(_dashboard_rag_conn, rag_articles)
-                result["rag_chunks"] = len(rag_articles)
-            else:
-                result["rag_warning"] = "No RAG articles indexed (empty API results)."
-        except Exception as ex:
-            result["rag_warning"] = f"RAG index not built: {ex}"
-        
+        _fetch_succeeded_once = True
+        rag_info = rebuild_dashboard_rag_index(selected, from_date, to_date)
+        result.update(rag_info)
+
         return result
         
     except Exception as e:
@@ -909,7 +969,12 @@ with ui.div(class_="hero-wrap"):
 @reactive.event(input.ask_guardian)
 def guardian_chat_result():
     """Run multi-agent + RAG pipeline when the user clicks Search."""
-    return run_guardian_chatbot(input.chat_query())
+    return run_guardian_chatbot(
+        input.chat_query(),
+        sidebar_countries=list(input.countries()),
+        sidebar_from_date=str(input.from_date()),
+        sidebar_to_date=str(input.to_date()),
+    )
 
 
 with ui.card(class_="mb-4 chat-response-card"):
