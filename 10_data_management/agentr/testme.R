@@ -19,11 +19,17 @@ if (!nzchar(base)) {
 }
 # Or if local, try this:
 # base = "http://localhost:8000"
+# Or if trying the instructor's deployment, try this:
+# base = "https://connect.systems-apps.com/autonomous_agent"
 
 cat("# Smoke test at", base, "\n\n")
 
 
 r1 = httr2::request(paste0(base, "/health")) |>
+  # IF USING DEPLOYED VERSION, ADD THE FOLLOWING HEADER:
+  # httr2::req_headers(
+  #   "Content-Type" = "application/json", 
+  #   "Authorization" = paste("Bearer", Sys.getenv("CONNECT_VIEWER_KEY"))) |>
   httr2::req_timeout(30) |>
   httr2::req_perform()
 
@@ -43,6 +49,10 @@ body = list(
 r2 = httr2::request(paste0(base, "/hooks/agent")) |>
   httr2::req_method("POST") |>
   httr2::req_headers("Content-Type" = "application/json") |>
+  # IF USING DEPLOYED VERSION, ADD THE FOLLOWING HEADER:
+  # httr2::req_headers(
+  #   "Content-Type" = "application/json", 
+  #   "Authorization" = paste("Bearer", Sys.getenv("CONNECT_VIEWER_KEY"))) |>
   httr2::req_body_json(body) |>
   httr2::req_timeout(120) |>
   httr2::req_perform()
