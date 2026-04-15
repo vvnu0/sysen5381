@@ -34,7 +34,14 @@ Endpoints are the same: **`GET /health`**, **`POST /hooks/agent`**, **`POST /hoo
 - [ ] **Python:** From **`agentpy/`**, start the server: **`python -m uvicorn app.api:app --host 0.0.0.0 --port 8000`**, or **`./runme.sh`** (see **[`agentpy/README.md`](agentpy/README.md)**).
 - [ ] **R:** From the **repository root** (**`dsai`**), run **`Rscript 10_data_management/agentr/runme.R`** or **`source("10_data_management/agentr/runme.R")`** (see **[`agentr/README.md`](agentr/README.md)**).
 - [ ] Open **`http://127.0.0.1:8000/health`** in a browser and confirm you see **`"ok": true`**.
+  - <img width="452" height="128" alt="image" src="https://github.com/user-attachments/assets/f61a194f-41b1-4763-89c6-ab3d7cff2424" />
+- [ ] Open **`http://127.0.0.1:8000/docs`** in a browser and peruse the Swagger UI documentation for the app! If successful, you will see this!
+  - <img width="1317" height="1296" alt="image" src="https://github.com/user-attachments/assets/572fca19-d2f9-4457-aa5b-0982eb26077c" />
 - [ ] Optional: after a brief, open **`logs/agent.log`** under **`agentpy/`** or **`agentr/`** and confirm turn-by-turn log lines (see the README for that folder if logging is disabled).
+  - <img width="1678" height="785" alt="image" src="https://github.com/user-attachments/assets/1a54955e-0745-4c8e-9967-adbef953a6b3" />
+ 
+
+
 
 ### 🧱 Stage 3: Send a task
 
