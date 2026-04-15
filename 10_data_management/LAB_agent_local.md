@@ -1,12 +1,12 @@
-# 📌 ACTIVITY
+# 📌 LAB
 
-## Run the Autonomous Agent Locally (Python or R)
+## Run an Autonomous Agent Locally (Python or R)
 
 🕒 *Estimated Time: 10–15 minutes*
 
 ---
 
-## 📋 Overview
+## 📋 Lab Overview
 
 You will install dependencies, configure **Ollama Cloud**, and call the **disaster situational brief** agent on your machine using plain **HTTP JSON** (no Slack). The same API exists in two implementations—pick **one**:
 
