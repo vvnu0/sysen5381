@@ -30,10 +30,16 @@ You will deploy the same agent you ran locally to **Posit Connect** (or your cla
 ### 🧱 Stage 2: Smoke test
 
 - [ ] Send an API call to your deployed API, using the [`testme.py`](https://github.com/timothyfraser/dsai/edit/main/10_data_management/agentpy/testme.py)/[`testme.R`](https://github.com/timothyfraser/dsai/edit/main/10_data_management/agentr/testme.R) script.
-   - [ ] For this to succeed, you will need to copy your deployed **base URL** (no trailing slash) into **`.env`** as **`AGENT_PUBLIC_URL`**. Then...
+   - [ ] For this to succeed, you will need to...
+      - [ ] copy your deployed **base URL** (no trailing slash) into **`.env`** as **`AGENT_PUBLIC_URL`**. Then...
+      - [ ] Add your Posit Connect Viewer key to the **`.env`** as **`CONNECT_VIEWER_KEY`**. Then... 
       - [ ] **Python:** From **`agentpy/`**, run **`python testme.py`** **or** call **`GET …/health`** manually.
       - [ ] **R:** From the **repository root**, run **`Rscript 10_data_management/agentr/testme.R`** **or** call **`GET …/health`** manually.
 - [ ] **`POST`** to **`…/hooks/agent`** on the **live** URL with the same JSON body you used locally; confirm you get **`200`** and a **`reply`**.
+
+   - For example, mine looks like this:
+<img width="1138" height="439" alt="image" src="https://github.com/user-attachments/assets/31c63a26-bb91-43e9-9991-5556f5b88048" />
+
 
 ### 🧱 Stage 3: Start / stop (optional)
 
