@@ -1,12 +1,12 @@
-# 📌 ACTIVITY
+# 📌 LAB
 
-## Deploy the Autonomous Agent (Python or R)
+## Deploy an Autonomous Agent (Python or R)
 
 🕒 *Estimated Time: 10–15 minutes*
 
 ---
 
-## 📋 Overview
+## 📋 Lab Overview
 
 You will deploy the same agent you ran locally to **Posit Connect** (or your class hosting environment), set environment variables on the server, and verify **`/health`** and **`/hooks/agent`** on the **public** URL. Pick the track that matches your local work:
 
