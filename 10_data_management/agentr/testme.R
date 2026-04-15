@@ -17,10 +17,11 @@ base = sub("/$", "", base)
 if (!nzchar(base)) {
   stop("Set AGENT_PUBLIC_URL in .env to your deployed base, e.g. https://connect.example.com/content/abc")
 }
+# Or if local, try this:
+# base = "http://localhost:8000"
 
 cat("# Smoke test at", base, "\n\n")
 
-base = "http://localhost:8000"
 
 r1 = httr2::request(paste0(base, "/health")) |>
   httr2::req_timeout(30) |>
