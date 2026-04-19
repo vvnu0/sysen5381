@@ -8,9 +8,12 @@
 
 ## 📋 Lab Overview
 
-Congress handles thousands of legal documents, regulations, constituent communications, and policy memos every week. Staffers need tools to work faster without sacrificing accuracy or security. In this lab, you will design a multi-agent AI system to help Congress manage this document workload.
+Congress handles thousands of legal documents, regulations, constituent communications, and policy memos every week. Staffers need tools to work faster without sacrificing accuracy or security. In this lab, you will design an agentic AI system to help Congress manage this document workload.
 
-You will first design a shared **base architecture** covering how documents are ingested, stored, and secured. Then your team (or, for distance learning students, you individually) will choose **one focal agent** to design in detail.
+You will choose **one focal agent** to design. Then, having clarified the goal, you will first design an **architecture** covering how information is accessed, ingested, stored, and secured, and how you ensure reliability of the agent.
+
+You are welcome to work as individuals or in teams. Each individual must submit a copy of their results.
+
 
 ---
 
@@ -18,8 +21,7 @@ You will first design a shared **base architecture** covering how documents are 
 
 ### Task 1: Choose Your Focal Agent
 
-You are welcome to work as individuals or in teams. Each individual must submit a copy of their results.
-Each team picks **one** of the following. 
+Pick one of the following agents to design.
 Design the agent's system prompt, retrieval logic, and output format in detail.
 
 ---
