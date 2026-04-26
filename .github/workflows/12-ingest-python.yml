@@ -13,7 +13,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-ingest-${{ hashFiles('.github/workflows/12-ingest-python.yml', '12_end/01_ingest_traffic.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-ingest-
+            ${{ runner.os }}-pip-
       - name: Install Python dependencies
         run: pip install requests pandas
       - name: Run Brussels ingestion script (Python)

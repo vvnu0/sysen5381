@@ -13,7 +13,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-train-${{ hashFiles('.github/workflows/12-train-python.yml', '12_end/02_train_model.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-train-
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: pip install pandas xgboost numpy
       - name: Run training script (Python)
