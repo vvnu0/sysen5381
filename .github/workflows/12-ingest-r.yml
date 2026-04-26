@@ -1,4 +1,4 @@
-name: Brussels Traffic Data Ingestion
+name: Traffic Data Ingestion Job (R)
 
 on:
   schedule:

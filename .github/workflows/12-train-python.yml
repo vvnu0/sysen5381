@@ -1,4 +1,4 @@
-name: Brussels Model Training (Python)
+name: Model Training Job (Python)
 
 on:
   schedule:

@@ -1,4 +1,4 @@
-name: Brussels Traffic Data Ingestion (Python)
+name: Traffic Data Ingestion (Python)
 
 on:
   schedule:

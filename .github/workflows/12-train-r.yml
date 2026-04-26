@@ -1,4 +1,4 @@
-name: Brussels Model Training
+name: Model Training Job (R)
 
 on:
   schedule:
