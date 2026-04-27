@@ -5,6 +5,10 @@ on:
     - cron: '*/15 * * * *' # every 15 minutes
   workflow_dispatch:
 
+concurrency:
+  group: dsai-main-writers
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -60,5 +64,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add 12_end/data/traffic.db
-          git diff --cached --quiet || git commit -m "chore: ingest traffic data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: ingest traffic data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

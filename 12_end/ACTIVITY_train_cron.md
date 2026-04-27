@@ -24,16 +24,11 @@ Training RMSE: 142.35
 
 ### 🧱 Stage 2: Automate weekly retraining
 
-- [ ] Open [`.github/workflows/12-train-r.yml`](../.github/workflows/12-train-r.yml) and [`.github/workflows/12-train-python.yml`](../.github/workflows/12-train-python.yml) and inspect the weekly cron schedule.
-- [ ] Confirm both `train_r` and `train_python` jobs run, so both model pipelines stay aligned.
+- [ ] Open [`.github/workflows/12-train-r.yml`](../.github/workflows/12-train-r.yml) or [`.github/workflows/12-train-python.yml`](../.github/workflows/12-train-python.yml) and inspect the weekly cron schedule.
+- [ ] Confirm `train_r`/`train_python` job runs.
 - [ ] Trigger the workflow manually from **Actions**.
-- [ ] Confirm both workflows commit their own files: R writes `data/modelr.json` and Python writes `data/modelpy.json`.
+- [ ] Confirm workflows commits its own files: R writes `data/modelr.json` and Python writes `data/modelpy.json`.
 
-### 🧱 Stage 3: Add dependency caching (optional but recommended)
-
-- [ ] In Python jobs, use `actions/setup-python` with `cache: 'pip'`.
-- [ ] In R jobs, use `r-lib/actions/setup-r-dependencies` to cache installed packages across runs.
-- [ ] Re-run the workflow and compare runtime improvement after cache warm-up.
 
 ---
 

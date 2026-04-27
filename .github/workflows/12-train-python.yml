@@ -5,6 +5,10 @@ on:
     - cron: '0 7 * * 1'   # weekly on Mondays at 7am UTC
   workflow_dispatch:        # allow manual trigger
 
+concurrency:
+  group: dsai-main-writers
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -64,5 +68,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add 12_end/data/modelpy.json 12_end/data/validationpy.json
-          git diff --cached --quiet || git commit -m "chore: train python model $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: train python model $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

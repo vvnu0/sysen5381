@@ -41,9 +41,10 @@ rsconnect::deployAPI(
 - [ ] Wait for the deployment to complete. Posit Connect handles the R environment automatically — no Docker required.
 - [ ] Copy the live URL from the deployment output (e.g. `https://connect.example.com/traffic-model-endpoint`).
 
-#### Option B: DigitalOcean App Platform (Python — FastAPI)
 
-Use this option if you prefer Python or already have a DigitalOcean account from earlier modules.
+#### Option B: Posit Connect (Python — FastAPI)
+
+Use this option if you prefer Python and want to deploy the FastAPI version to Posit Connect.
 
 Files:
 - [`fastapi/main.py`](fastapi/main.py)
