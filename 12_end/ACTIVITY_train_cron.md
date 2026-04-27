@@ -15,10 +15,10 @@ Train an XGBoost model using Brussels rows for one `metro_id`, then run weekly r
 - [ ] Open [`02_train_model.R`](02_train_model.R) or [`02_train_model.py`](02_train_model.py).
 - [ ] Confirm `METRO_ID` is set to Brussels (default `948`).
 - [ ] Run the script from `12_end/`.
-- [ ] Confirm `data/model.json` is created and RMSE is printed.
+- [ ] Confirm `data/modelr.json` (R) or `data/modelpy.json` (Python) is created and RMSE is printed.
 
 ```
-Model saved to data/model.json
+Model saved to data/modelr.json
 Training RMSE: 142.35
 ```
 
@@ -27,7 +27,7 @@ Training RMSE: 142.35
 - [ ] Open [`.github/workflows/12-train-r.yml`](../.github/workflows/12-train-r.yml) and [`.github/workflows/12-train-python.yml`](../.github/workflows/12-train-python.yml) and inspect the weekly cron schedule.
 - [ ] Confirm both `train_r` and `train_python` jobs run, so both model pipelines stay aligned.
 - [ ] Trigger the workflow manually from **Actions**.
-- [ ] Download the model artifacts and confirm both include `data/model.json`.
+- [ ] Confirm both workflows commit their own files: R writes `data/modelr.json` and Python writes `data/modelpy.json`.
 
 ### 🧱 Stage 3: Add dependency caching (optional but recommended)
 

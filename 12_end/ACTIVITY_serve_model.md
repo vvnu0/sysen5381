@@ -8,11 +8,11 @@
 
 ## ✅ Your Task
 
-Start a local endpoint that loads `data/model.json` and predicts Brussels vehicle counts from `day_of_week` and `hour_of_day`.
+Start a local endpoint that loads the framework-specific model (`data/modelr.json` for Plumber, `data/modelpy.json` for FastAPI) and predicts Brussels vehicle counts from `day_of_week` and `hour_of_day`.
 
 ### 🧱 Stage 1: Run the endpoint locally
 
-Make sure `data/model.json` exists (run the training script first if needed).
+Make sure `data/modelr.json` (R) or `data/modelpy.json` (Python) exists (run the matching training script first if needed).
 
 **R (Plumber):**
 ```r

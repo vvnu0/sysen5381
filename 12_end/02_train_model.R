@@ -35,8 +35,8 @@ script_dir = if (!is.na(script_path) && nzchar(script_path)) {
 }
 DB_PATH = file.path(script_dir, "data", "traffic.db")
 DATA_DIR = file.path(script_dir, "data")
-MODEL_PATH = file.path(DATA_DIR, "model.json")
-VALIDATION_PATH = file.path(DATA_DIR, "validation.json")
+MODEL_PATH = file.path(DATA_DIR, "modelr.json")
+VALIDATION_PATH = file.path(DATA_DIR, "validationr.json")
 METRO_ID = 948
 
 dir.create(DATA_DIR, showWarnings = FALSE, recursive = TRUE)

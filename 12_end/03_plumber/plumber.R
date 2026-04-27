@@ -10,15 +10,15 @@ library(jsonlite)
 # Build a short list of candidate model locations so the API works
 # whether it is launched from repo root or from inside 12_end.
 model_candidates = c(
-  "data/model.json",
-  "12_end/data/model.json",
-  "../data/model.json"
+  "data/modelr.json",
+  "12_end/data/modelr.json",
+  "../data/modelr.json"
 )
 
 validation_candidates = c(
-  "data/validation.json",
-  "12_end/data/validation.json",
-  "../data/validation.json"
+  "data/validationr.json",
+  "12_end/data/validationr.json",
+  "../data/validationr.json"
 )
 
 resolve_first_path = function(candidates, label) {
@@ -27,8 +27,8 @@ resolve_first_path = function(candidates, label) {
   resolved
 }
 
-model_path = resolve_first_path(model_candidates, "model.json")
-validation_path = resolve_first_path(validation_candidates, "validation.json")
+model_path = resolve_first_path(model_candidates, "modelr.json")
+validation_path = resolve_first_path(validation_candidates, "validationr.json")
 
 model = xgboost::xgb.load(model_path)
 validation = jsonlite::fromJSON(validation_path, simplifyVector = TRUE)

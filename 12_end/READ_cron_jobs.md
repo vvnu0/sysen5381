@@ -65,12 +65,12 @@ Key points:
 Cron jobs and REST endpoints play complementary roles in a data pipeline:
 
 ```
-data.gov.sg (Singapore) → ingest cron → SQLite/Supabase table with metro_id → train cron → model.json → REST endpoint → agent
+data.gov.sg (Singapore) → ingest cron → SQLite/Supabase table with metro_id → train cron → modelr.json/modelpy.json → REST endpoint → agent
 ```
 
 - **Ingest cron**: runs daily, pulls Singapore annual traffic rows, writes `metro_id`, `observed_at`, and `vehicle_count`
 - **Train cron**: runs weekly, reads one metro's rows and trains a simple year-based model
-- **REST endpoint**: runs always, loads `model.json`, returns predictions from `year`
+- **REST endpoint**: runs always, loads `modelr.json` (R) or `modelpy.json` (Python), returns predictions from `year`
 - **Agent**: calls `/predict?year=...` as a tool
 
 This separation keeps each piece simple and independently replaceable.

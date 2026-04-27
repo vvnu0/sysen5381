@@ -19,8 +19,8 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR / "data"
 DB_PATH = SCRIPT_DIR / "data" / "traffic.db"
-MODEL_PATH = DATA_DIR / "model.json"
-VALIDATION_PATH = DATA_DIR / "validation.json"
+MODEL_PATH = DATA_DIR / "modelpy.json"
+VALIDATION_PATH = DATA_DIR / "validationpy.json"
 METRO_ID = 948
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)

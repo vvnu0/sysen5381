@@ -14,9 +14,9 @@ import json
 
 def resolve_model_path() -> Path:
     candidates = [
-        Path("data/model.json"),
-        Path("../data/model.json"),
-        Path("12_end/data/model.json"),
+        Path("data/modelpy.json"),
+        Path("../data/modelpy.json"),
+        Path("12_end/data/modelpy.json"),
     ]
     for path in candidates:
         if path.exists():
@@ -26,9 +26,9 @@ def resolve_model_path() -> Path:
 
 def resolve_validation_path() -> Path:
     candidates = [
-        Path("data/validation.json"),
-        Path("../data/validation.json"),
-        Path("12_end/data/validation.json"),
+        Path("data/validationpy.json"),
+        Path("../data/validationpy.json"),
+        Path("12_end/data/validationpy.json"),
     ]
     for path in candidates:
         if path.exists():

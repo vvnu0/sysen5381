@@ -8,7 +8,7 @@
 
 ## ✅ Your Task
 
-Deploy your local prediction endpoint so it serves `/predict?day_of_week=...&hour_of_day=...` from your latest `data/model.json`.
+Deploy your local prediction endpoint so it serves `/predict?day_of_week=...&hour_of_day=...` from your latest framework-specific model (`data/modelr.json` for Plumber or `data/modelpy.json` for FastAPI).
 
 ### 🧱 Stage 1: Choose one deployment path
 
