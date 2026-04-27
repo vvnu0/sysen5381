@@ -5,16 +5,24 @@ on:
     - cron: '*/15 * * * *' # every 15 minutes
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   ingest_r:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: CHECKOUT REPOSITORY
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
 
       - uses: r-lib/actions/setup-r@v2
-      - name: Set user library path for cache
+
+      - name: SET USER LIBRARY PATH FOR CACHE
         run: echo "R_LIBS_USER=${HOME}/.cache/R/gha-library" >> $GITHUB_ENV
-      - name: Cache R packages
+
+      - name: CACHE PACKAGES
         uses: actions/cache@v4
         with:
           path: ${{ env.R_LIBS_USER }}
@@ -22,7 +30,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-r-lib-ingest-
             ${{ runner.os }}-r-lib-
-      - uses: r-lib/actions/setup-r-dependencies@v2
+
+      - name: SETUP DEPENDENCIES
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
             any::httr2
@@ -33,14 +43,14 @@ jobs:
             any::DBI
             any::RSQLite
 
-      - name: Run Brussels ingestion script (R)
+      - name: RUN INGESTION JOB
         working-directory: 12_end
         run: Rscript 01_ingest_traffic.R
 
-      - name: Commit updated database
+      - name: COMMIT CHANGES
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add 12_end/data/traffic.db
-          git diff --cached --quiet || git commit -m "chore: ingest brussels traffic data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git diff --cached --quiet || git commit -m "chore: ingest traffic data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
