@@ -1,6 +1,6 @@
 # 📌 ACTIVITY
 
-## Train a Brussels Model with a Weekly Cron Job
+## Train Model with Weekly Cron Job
 
 🕒 *Estimated Time: 10-15 minutes*
 

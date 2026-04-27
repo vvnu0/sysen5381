@@ -1,6 +1,6 @@
 # 📌 ACTIVITY
 
-## Ingest Brussels Traffic Data with a Cron Job
+## Ingest Data with a Cron Job
 
 🕒 *Estimated Time: 10-15 minutes*
 

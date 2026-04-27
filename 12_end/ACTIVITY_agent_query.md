@@ -1,6 +1,6 @@
 # 📌 ACTIVITY
 
-## Query Your Model Endpoint with an AI Agent
+## Query Model Endpoint with AI Agent
 
 🕒 *Estimated Time: 10-15 minutes*
 

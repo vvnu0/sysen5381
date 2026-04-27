@@ -1,6 +1,6 @@
 # 📌 ACTIVITY
 
-## Deploy Your Model Endpoint Online
+## Deploy Model Endpoint Online
 
 🕒 *Estimated Time: 10-15 minutes*
 

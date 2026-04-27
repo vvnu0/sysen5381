@@ -1,6 +1,6 @@
 # 📌 ACTIVITY
 
-## Serve a Trained Model as a REST Endpoint
+## Serve Model as REST Endpoint
 
 🕒 *Estimated Time: 10-15 minutes*
 
