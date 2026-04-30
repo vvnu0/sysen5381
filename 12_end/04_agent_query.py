@@ -82,7 +82,12 @@ tool_predict_vehicle_count = {
 
 # 4. RUN AGENT ###################################
 
-messages = [
+tools = [tool_predict_vehicle_count]
+
+# 5. VERIFY ###################################
+
+# First test case: Monday at 8 AM
+messages_1 = [
     {
         "role": "system",
         "content": (
@@ -94,24 +99,54 @@ messages = [
     },
     {
         "role": "user",
-        "content": "Predict Brussels vehicle count for Monday for every hour (0 through 23).",
+        "content": "Predict Brussels vehicle count for Monday at 8 AM.",
     }
 ]
-tools = [tool_predict_vehicle_count]
 
-result = agent(
-    messages=messages,
+result_1 = agent(
+    messages=messages_1,
     model=MODEL,
     output="text",
     tools=tools
 )
 
-print("Agent result:", result)
+direct_1 = predict_vehicle_count(day_of_week=1, hours_of_day=[8])
 
-# 5. VERIFY ###################################
-
-direct = predict_vehicle_count(day_of_week=1, hours_of_day=list(range(24)))
-print("Direct API call predictions returned:", len(direct["predictions"]))
-print(f"Sample one-minute vehicle count: {direct['predictions'][8]['predicted_vehicle_count']} (1m/t1 at Monday 08:00)")
+print("\n--- CASE 1: Monday at 08:00 ---")
+print("Agent result:", result_1)
+print("Direct API call:", direct_1["predictions"][0]["predicted_vehicle_count"])
 print("Unit:", UNIT_NOTE)
-print("Match:", str(direct["predictions"][8]["predicted_vehicle_count"]) in str(result))
+
+# Second test case: Friday at 5 PM
+messages_2 = [
+    {
+        "role": "system",
+        "content": (
+            "You are a Brussels traffic assistant. "
+            "Always report units clearly as vehicles observed in one representative minute "
+            "(1m/t1 interval) within the requested hour and day of week. "
+            "Call predict_vehicle_count using day_of_week and hours_of_day vector."
+        ),
+    },
+    {
+        "role": "user",
+        "content": (
+            "Predict Brussels vehicle count for Friday at 5 PM. "
+            "Use day_of_week=5 for Friday and hours_of_day=[17] for 5 PM."
+        ),
+    }
+]
+
+result_2 = agent(
+    messages=messages_2,
+    model=MODEL,
+    output="text",
+    tools=tools
+)
+
+direct_2 = predict_vehicle_count(day_of_week=5, hours_of_day=[17])
+
+print("\n--- CASE 2: Friday at 17:00 ---")
+print("Agent result:", result_2)
+print("Direct API call:", direct_2["predictions"][0]["predicted_vehicle_count"])
+print("Unit:", UNIT_NOTE)
