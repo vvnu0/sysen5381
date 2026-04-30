@@ -137,6 +137,15 @@ jobs:
         working-directory: 12_end
         run: python 02_train_model.py
 
+      - name: UPLOAD XGBOOST MODEL ARTIFACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgboost-model
+          path: |
+            12_end/data/modelpy.json
+            12_end/data/validationpy.json
+          if-no-files-found: error
+
       - name: COMMIT CHANGES
         run: |
           git config user.name "github-actions[bot]"
