@@ -2,20 +2,22 @@
 
 Shiny app that analyzes **The Guardian Open Platform** API data: country coverage charts, an **Ollama Cloud** narrative report, and **Ask The Guardian** (multi-agent flow with **tool calling** and **RAG**). Full technical reference, diagrams, and usage are below.
 
-**Quick links for assignments:** [Process diagrams (Mermaid)](#process-diagrams) · [System architecture](#system-architecture) · [RAG and tools](#rag-and-tool-implementation) · [Technical details](#technical-details) · [Usage](#usage) · [Deployment](#deployment-posit-connect-or-similar)
+**Quick links for assignments:** [Rubric mapping](#rubric-mapping-production-readiness-and-validation) · [Process diagrams (Mermaid)](#process-diagrams) · [System architecture](#system-architecture) · [RAG and tools](#rag-and-tool-implementation) · [Quality control](#quality-control-and-validation) · [Technical details](#technical-details) · [Usage](#usage) · [Deployment](#deployment-posit-connect-or-similar)
 
 ---
 
 ## Table of contents
 
 1. [What the app does and who it is for](#what-the-app-does-and-who-it-is-for)
-2. [Process diagrams](#process-diagrams)
-3. [System architecture](#system-architecture)
-4. [RAG and tool implementation](#rag-and-tool-implementation)
-5. [Technical details](#technical-details)
-6. [Usage](#usage)
-7. [Deployment (Posit Connect or similar)](#deployment-posit-connect-or-similar)
-8. [Error handling and troubleshooting](#error-handling-and-troubleshooting)
+2. [Rubric mapping: production readiness and validation](#rubric-mapping-production-readiness-and-validation)
+3. [Process diagrams](#process-diagrams)
+4. [System architecture](#system-architecture)
+5. [RAG and tool implementation](#rag-and-tool-implementation)
+6. [Quality control and validation](#quality-control-and-validation)
+7. [Technical details](#technical-details)
+8. [Usage](#usage)
+9. [Deployment (Posit Connect or similar)](#deployment-posit-connect-or-similar)
+10. [Error handling and troubleshooting](#error-handling-and-troubleshooting)
 
 ---
 
@@ -34,6 +36,56 @@ After a successful fetch, the app runs a **second** Guardian pass for the same c
 **Ask The Guardian** is intentionally **decoupled** from the sidebar dates. You type a question such as what happened in US basketball last week. **Agent 1** is a system prompt plus your text sent to Ollama with **tool metadata** for **`search_guardian_articles`**. The model returns a **tool call** with **`country`**, **`from_date`**, and **`to_date`** as strings. **Python** executes the real function, which calls **`rag_guardian.query_guardian`**, so the network request always matches what the tool arguments say. Returned articles are embedded into an **in-memory** SQLite vec database for that question only, then **`search(..., k=5)`** retrieves the passages closest to your full question embedding so the model can focus on basketball even though the Guardian **`q`** parameter was only the country. **Agent 2** receives the question plus those excerpts and writes the visible answer; the UI lists **Sources** with links. The analyst prompt asks for **no inline citation clutter** so the prose stays readable while accountability stays in the source list.
 
 Together, the dashboard answers **who got how much coverage in my chosen window**, the AI report adds **interpretive language tied to those aggregates**, and Ask The Guardian adds **ad hoc grounding** over real article text for a different time and place without redoing the whole sidebar workflow each time.
+
+---
+
+## Rubric mapping: production readiness and validation
+
+This section explicitly maps the implementation to the grading criteria.
+
+### 1) Production-Ready Functional App
+
+#### Stakeholder alignment
+- **Who it serves:** newsroom editors, media researchers, policy analysts, and students.
+- **Problem solved:** quickly quantify and compare geographic attention in Guardian coverage, then produce source-backed narrative summaries.
+- **Value delivered:** combines descriptive analytics (charts/tables) with grounded Q&A and a concise AI report in one workflow.
+
+#### Clarity
+- **Clear user actions:** sidebar flow is straightforward: choose dates/countries -> click **Fetch Data** -> review visuals -> optional **Generate AI Report**.
+- **Clear AI flow:** **Ask The Guardian** accepts plain-English questions and returns an answer plus linked sources.
+- **In-app explanation:** Assistant card includes a trust note and optional **How this answer was generated** disclosure for transparent behavior.
+
+#### Streamlining
+- **Focused scope:** app centers on one core use case (geographic attention analysis) with three tightly related outputs: dashboard metrics, AI report, grounded Q&A.
+- **No debug-heavy UI:** quality checks are shown in user-facing language; deeper diagnostics are moved to the offline evaluator script.
+- **No unnecessary repeated clicks:** first-click chart workaround was removed; charts now load without duplicating fetch events.
+
+#### Efficiency
+- **Single-click render path:** Plotly is preloaded once at startup so charts render on first fetch.
+- **Bounded retrieval:** chatbot semantic search uses top-k retrieval (`k=5`) for fast answer context assembly.
+- **In-memory query RAG:** Ask flow uses an in-memory vector index per question, avoiding persistent write overhead for each chat turn.
+
+#### Reliability 
+- **Input validation:** checks for missing API keys, empty country selection, and invalid date ranges.
+- **Resilient error handling:** handles common API failures (401, 429, timeouts, connection issues) and returns clear user-facing messages.
+- **Deterministic constraints:** planner prompt requires one tool call with explicit country/date arguments in `YYYY-MM-DD` format.
+- **Consistent fallback behavior:** if semantic hits are empty, app returns a safe guidance message instead of fabricating unsupported claims.
+
+### 2) Quality Control and Validation
+
+#### Quality control implementation
+- **Grounded-answer contract:** analyst prompt instructs the model to use only retrieved article excerpts.
+- **Source transparency:** UI always pairs answer text with linked source cards.
+- **Process disclosure:** trust note summarizes retrieval grounding for each answer.
+- **Structured validation script:** `evaluate_ai_quality.py` checks country parsing, date validity, retrieval success, and per-case pass/fail.
+
+#### Evidence of AI performance
+- **Quantitative outputs saved:** evaluator writes timestamped CSV/JSONL files in `validation_results/`.
+- **Recorded metrics include:** expected vs actual country, date validity, articles fetched, sources used, average relevance, pass/fail, and error text.
+- **Smoke-test + full-run commands:**
+  - `python evaluate_ai_quality.py --max-cases 2`
+  - `python evaluate_ai_quality.py`
+- **Submission-ready evidence:** include one validation CSV screenshot/table and report pass rate (e.g., passed cases / total cases), plus examples of failure modes and how they are handled.
 
 ---
 
@@ -156,6 +208,29 @@ Tool schemas the LLM sees live in **`agent_workflow.py`** as `tool_search_guardi
 
 ---
 
+## Quality control and validation
+
+The live app keeps quality control user-facing rather than showing debug metrics. After **Ask The Guardian** returns an answer, the Assistant card explains that the response is based on the matching Guardian articles shown below it. An optional **How this answer was generated** disclosure summarizes the country/date search, how many Guardian articles were retrieved, and that the answer was generated from the top retrieved excerpts.
+
+For assignment evidence, **`evaluate_ai_quality.py`** runs representative questions through the same planner + Guardian tool + RAG retrieval workflow and saves validation results as CSV and JSONL. The output records whether the planner chose the expected country, whether dates were valid, how many articles were fetched, how many sources were used, the average relevance score, and whether the case passed.
+
+Run a quick smoke test:
+
+```powershell
+cd 04_deployment/app
+python evaluate_ai_quality.py --max-cases 2
+```
+
+Run the full validation set:
+
+```powershell
+python evaluate_ai_quality.py
+```
+
+Results are written to **`validation_results/`** with timestamped filenames such as **`ai_validation_results_YYYYMMDD_HHMMSS.csv`**.
+
+---
+
 ## Technical details
 
 | Topic | Detail |
@@ -174,6 +249,7 @@ dsai/.env
   app.py
   rag_guardian.py
   agent_workflow.py
+  evaluate_ai_quality.py # validation evidence script
   requirements.txt
   manifest.json          # Posit Connect bundle list
   dashboard_rag.db       # created at runtime (optional gitignore)

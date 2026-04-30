@@ -370,25 +370,37 @@ def _lazy_seed_dashboard_rag(sidebar_countries, sidebar_from_date, sidebar_to_da
     )
 
 
+def _extract_tool_arguments(tool_call):
+    """Return the structured arguments the planner sent to the Guardian tool."""
+    raw_args = tool_call.get("function", {}).get("arguments", {})
+    if isinstance(raw_args, str):
+        try:
+            return json.loads(raw_args)
+        except json.JSONDecodeError:
+            return {}
+    return raw_args if isinstance(raw_args, dict) else {}
+
+
 def _extract_articles_from_planner(result1):
-    """Parse tool output from Agent 1 (search_guardian_articles)."""
+    """Parse tool output and arguments from Agent 1 (search_guardian_articles)."""
     if not result1:
-        return [], "No response from the query planner."
+        return [], "No response from the query planner.", {}
     if not isinstance(result1, list):
-        return [], "Unexpected response from the query planner."
+        return [], "Unexpected response from the query planner.", {}
     for tc in result1:
+        planned_search = _extract_tool_arguments(tc)
         out = tc.get("output")
         if not isinstance(out, list) or not out:
             continue
         if not isinstance(out[0], dict):
             continue
         if "error" in out[0]:
-            return [], str(out[0].get("error", "Guardian API error"))
-        return out, None
+            return [], str(out[0].get("error", "Guardian API error")), planned_search
+        return out, None, planned_search
     return [], (
         "The model did not retrieve articles. Try naming a country "
         f"({', '.join(COUNTRIES[:3])}, …) and a time period (e.g. last week)."
-    )
+    ), {}
 
 
 def run_guardian_chatbot(
@@ -437,7 +449,7 @@ def run_guardian_chatbot(
     except Exception as e:
         return {"ok": False, "error": f"Query planner failed: {e}"}
 
-    articles, err = _extract_articles_from_planner(result1)
+    articles, err, planned_search = _extract_articles_from_planner(result1)
     if err:
         return {"ok": False, "error": err}
 
@@ -457,7 +469,11 @@ def run_guardian_chatbot(
                 pass
 
     if not hits:
-        meta_empty = {}
+        meta_empty = {
+            "articles_fetched": len(articles),
+            "sources_used": 0,
+            "planned_search": planned_search,
+        }
         rag_lazy = _lazy_seed_dashboard_rag(
             sidebar_countries, sidebar_from_date, sidebar_to_date
         )
@@ -506,6 +522,10 @@ def run_guardian_chatbot(
     meta = {
         "articles_fetched": len(articles),
         "sources_used": len(hits),
+        "average_relevance": round(
+            sum(float(h.get("score", 0)) for h in hits) / len(hits), 3
+        ),
+        "planned_search": planned_search,
     }
     rag_lazy = _lazy_seed_dashboard_rag(
         sidebar_countries, sidebar_from_date, sidebar_to_date
@@ -757,6 +777,18 @@ ui.tags.style("""
     .source-link:hover { text-decoration: underline !important; }
     .source-meta { font-size: 0.75rem; color: var(--apple-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
     .source-trail { font-size: 0.85rem; color: var(--apple-text); margin: 0.5rem 0 0; line-height: 1.45; }
+    .trust-note {
+        background: rgba(0,122,255,0.06);
+        border: 1px solid rgba(0,122,255,0.12);
+        border-radius: 10px;
+        color: var(--apple-text);
+        font-size: 0.86rem;
+        margin: 0 1rem 0.75rem;
+        padding: 0.75rem 0.9rem;
+    }
+    .trust-note details { margin-top: 0.35rem; }
+    .trust-note summary { color: var(--apple-blue); cursor: pointer; font-weight: 600; }
+    .trust-note ol { margin: 0.45rem 0 0 1.1rem; padding: 0; }
 """)
 
 # 3. Sidebar — Input Controls ######################
@@ -1021,7 +1053,38 @@ with ui.card(class_="mb-4 chat-response-card"):
             ui.div(ui.markdown(res["answer"]), class_="p-3 chat-answer-md"),
         ]
         srcs = res.get("sources") or []
+        meta = res.get("meta") or {}
         if srcs:
+            planned = meta.get("planned_search") or {}
+            planned_country = planned.get("country", "the selected country")
+            planned_from = planned.get("from_date", "the selected start date")
+            planned_to = planned.get("to_date", "the selected end date")
+            blocks.append(
+                ui.div(
+                    ui.tags.strong(
+                        f"Based on {len(srcs)} matching Guardian articles. "
+                    ),
+                    "Review the source list below for the articles used in this answer.",
+                    ui.tags.details(
+                        ui.tags.summary("How this answer was generated"),
+                        ui.tags.ol(
+                            ui.tags.li(
+                                "The app interpreted your question as a Guardian search for "
+                                f"{planned_country} from {planned_from} to {planned_to}."
+                            ),
+                            ui.tags.li(
+                                f"It retrieved {meta.get('articles_fetched', len(srcs))} "
+                                "Guardian articles and ranked them by semantic relevance."
+                            ),
+                            ui.tags.li(
+                                "The answer was generated from the top matching excerpts; "
+                                "the linked articles remain visible for review."
+                            ),
+                        ),
+                    ),
+                    class_="trust-note",
+                )
+            )
             blocks.append(ui.h5("Sources", class_="px-3 pt-2 mb-0"))
             for i, s in enumerate(srcs, 1):
                 headline = s.get("headline") or "Article"
@@ -1048,15 +1111,6 @@ with ui.card(class_="mb-4 chat-response-card"):
                 if trail:
                     src_children.append(ui.tags.p(trail, class_="source-trail"))
                 blocks.append(ui.div(*src_children, class_="source-card"))
-        meta = res.get("meta") or {}
-        if meta:
-            blocks.append(
-                ui.tags.p(
-                    f"Fetched {meta.get('articles_fetched', '—')} articles from the API; "
-                    f"used the top {meta.get('sources_used', '—')} matches for context.",
-                    class_="text-muted small px-3 pb-3 mb-0",
-                )
-            )
         return ui.div(*blocks)
 
 # Status banner for errors and warnings
