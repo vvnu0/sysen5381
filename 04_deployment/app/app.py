@@ -521,6 +521,10 @@ def run_guardian_chatbot(
 # Set page title (compatible with older Shiny versions)
 ui.tags.title("Geographic Attention Reporter")
 
+# Load Plotly once during page startup. Each chart below then renders without
+# re-injecting the CDN script, which avoids first-click timing issues.
+ui.tags.script(src="https://cdn.plot.ly/plotly-2.35.2.min.js")
+
 # Apple-inspired design system
 ui.tags.style("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -782,26 +786,10 @@ with ui.sidebar(open="desktop", width=300):
     
     ui.hr()
     
-    # Fetch Data button with double-trigger fix
+    # Fetch Data button
     ui.input_action_button(
         "run_query", "Fetch Data", class_="btn-primary w-100",
     )
-    
-    # JavaScript to trigger button twice (fixes chart rendering on first click)
-    ui.tags.script("""
-        (function() {
-            let isSecondClick = false;
-            document.addEventListener('click', function(e) {
-                if (e.target && e.target.id === 'run_query' && !isSecondClick) {
-                    isSecondClick = true;
-                    setTimeout(function() {
-                        document.getElementById('run_query').click();
-                        isSecondClick = false;
-                    }, 150);
-                }
-            }, true);
-        })();
-    """)
     
     ui.br()
     ui.br()
@@ -842,7 +830,6 @@ def fetch_data():
             return {"error": "From date must be before to date."}
         
         all_articles = []
-        totals = {}
         failed_countries = []
         error_messages = []
         
@@ -854,7 +841,6 @@ def fetch_data():
                 error_messages.append(f"{country}: {error}")
             elif articles:
                 all_articles.extend(articles)
-                totals[country] = total
             else:
                 failed_countries.append(country)
                 error_messages.append(f"{country}: No articles found")
@@ -868,10 +854,18 @@ def fetch_data():
             return {"error": "No articles found for the selected criteria."}
         
         df_articles = pd.DataFrame(all_articles)
-        
-        df_summary = (pd.DataFrame(
-                [{"country": c, "total_articles": totals.get(c, 0)} for c in selected]
-            )
+
+        # Keep summary counts aligned with chart/table rows by computing totals
+        # from the fetched article records (same data used throughout the UI).
+        counts_by_country = (
+            df_articles.groupby("country")
+            .size()
+            .reindex(selected, fill_value=0)
+            .reset_index(name="total_articles")
+        )
+
+        df_summary = (
+            counts_by_country
             .assign(
                 population_m=lambda x: x["country"].map(POPULATIONS),
                 articles_per_1m=lambda x: (x["total_articles"] / x["population_m"]).round(1),
@@ -962,6 +956,29 @@ with ui.div(class_="hero-wrap"):
             class_="btn-primary",
         ),
         class_="hero-search-row",
+    )
+    ui.tags.p(
+        "Built for journalism students, editors, and media researchers who need a fast view of "
+        "where Guardian attention is concentrated across countries and topics.",
+        class_="hero-sub",
+    )
+
+
+with ui.card(class_="mb-3"):
+    ui.card_header("Who This Helps and Why")
+    ui.tags.div(
+        ui.tags.p(
+            "Use this dashboard to compare geographic coverage intensity, detect topic imbalances, "
+            "and generate source-backed summaries for newsroom and classroom decisions.",
+            class_="mb-2",
+        ),
+        ui.tags.ul(
+            ui.tags.li("Editors: spot under-covered countries and rebalance coverage plans."),
+            ui.tags.li("Researchers and students: quantify media attention with reproducible metrics."),
+            ui.tags.li("Stakeholders: ask natural-language questions and inspect linked source articles."),
+            class_="mb-0",
+        ),
+        class_="p-3",
     )
 
 
@@ -1142,7 +1159,7 @@ with ui.layout_columns(col_widths=[6, 6]):
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
             )
-            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
+            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs=False))
     
     with ui.card():
         ui.card_header("Coverage Per Capita (per 1M Population)")
@@ -1172,7 +1189,7 @@ with ui.layout_columns(col_widths=[6, 6]):
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
             )
-            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
+            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs=False))
 
 
 # Row 3: Topic breakdown + Summary table
@@ -1210,7 +1227,7 @@ with ui.layout_columns(col_widths=[6, 6]):
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
             )
-            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
+            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs=False))
     
     with ui.card():
         ui.card_header("Country Coverage Summary")
@@ -1255,7 +1272,7 @@ with ui.layout_columns(col_widths=[5, 7]):
                 hole=0.4,
             )
             fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=300)
-            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs="cdn"))
+            return ui.HTML(fig.to_html(full_html=False, include_plotlyjs=False))
     
     with ui.card():
         ui.card_header("Sample Articles")

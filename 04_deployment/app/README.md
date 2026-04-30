@@ -25,7 +25,7 @@ The Geographic Attention Reporter is a **Shiny for Python** dashboard built arou
 
 In the **sidebar** you pick up to **ten countries** (United States, United Kingdom, China, India, Russia, Brazil, Germany, France, Australia, Japan) and a **from date** and **to date**. When you click **Fetch Data**, the app loops over each selected country and issues **`GET https://content.guardianapis.com/search`** with **`q`** set to the country name, your dates, **`page-size` 50**, and **`show-fields=wordcount`** for the chart pipeline. The JSON gives you titles, sections, publication dates, URLs, and word counts. The app maps each article **`sectionId`** into six coarse **topics** (Politics, Culture, Crisis, Sport, Business, Science) plus Other, and it joins each country to a **population in millions** stored in code so it can compute **articles per million people**. That per capita view matters because otherwise a country with a huge population almost always wins on raw counts even when coverage intensity is low.
 
-The **dashboard** renders **value boxes** (totals, how many countries, who leads), horizontal **bar charts** for volume and per capita, **stacked** topic bars by country, a **pie** of overall topic mix, and **filterable tables** for the summary grid and sample article rows. There is a small **JavaScript** workaround so the first **Fetch Data** click effectively fires twice; without it some **Plotly** outputs did not see data on the first reactive pass in our tests.
+The **dashboard** renders **value boxes** (totals, how many countries, who leads), horizontal **bar charts** for volume and per capita, **stacked** topic bars by country, a **pie** of overall topic mix, and **filterable tables** for the summary grid and sample article rows. Plotly is loaded once at page startup so the charts can render on the first **Fetch Data** click without repeating the API request.
 
 After a successful fetch, the app runs a **second** Guardian pass for the same countries and dates with **`show-fields`** expanded to **`wordcount,trailText,headline,shortUrl`**. Those rows feed **sentence-transformers** (`all-MiniLM-L6-v2`) and **sqlite-vec** to build **`dashboard_rag.db`**, a vector index of headline plus trail text for semantic search over the sidebar window. If your **first** action is **Ask The Guardian** instead of fetch, the app can still create that file **once** from whatever is currently in the sidebar, so the on-disk RAG index is not stuck behind the button order.
 
@@ -207,7 +207,7 @@ dsai/.env
 |-----------|-------------------------|
 | Missing Guardian key | Red banner; add key and restart |
 | Missing Ollama key | Warning; AI features return errors |
-| Charts empty first click | Known Shiny quirk; **Fetch Data** auto double-clicks once |
+| Charts empty first click | Plotly is preloaded at page startup; if charts stay empty, refresh the app and check the browser console |
 | Chat planner fails | Name a valid country and a clearer time window |
 | `No module named rag_guardian` on Connect | Bundle all three Python files; `app.py` adds its folder to `sys.path` |
 
