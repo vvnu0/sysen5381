@@ -9,7 +9,7 @@ Shiny app that analyzes **The Guardian Open Platform** API data: country coverag
 ## Table of contents
 
 1. [What the app does and who it is for](#what-the-app-does-and-who-it-is-for)
-2. Rubric mapping: production readiness and validation (#rubric-mapping:-production-readiness-and-validation)
+2. [Rubric mapping: production readiness and validation](#rubric-mapping:-production-readiness-and-validation)
 3. [Process diagrams](#process-diagrams)
 4. [System architecture](#system-architecture)
 5. [RAG and tool implementation](#rag-and-tool-implementation)
