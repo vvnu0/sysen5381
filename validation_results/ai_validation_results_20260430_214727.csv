@@ -1,0 +1,3 @@
+id,question,expected_country,tool_country,from_date,to_date,dates_valid,country_match,articles_fetched,sources_used,average_relevance,passed,error
+us_basketball_last_week,What was happening in basketball in the United States last week?,United States,United States,2026-04-22,2026-04-28,True,True,50,5,0.2,True,
+uk_yesterday,What did The Guardian cover about the United Kingdom yesterday?,United Kingdom,United Kingdom,2026-04-29,2026-04-29,True,True,18,5,0.301,True,
