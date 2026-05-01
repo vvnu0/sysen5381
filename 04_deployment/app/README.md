@@ -92,6 +92,23 @@ This section explicitly maps the implementation to the grading criteria.
 
 The live app keeps quality control user-facing rather than showing debug metrics. After **Ask The Guardian** returns an answer, the Assistant card explains that the response is based on the matching Guardian articles shown below it. An optional **How this answer was generated** disclosure summarizes the country/date search, how many Guardian articles were retrieved, and that the answer was generated from the top retrieved excerpts.
 
+For assignment evidence, **`evaluate_ai_quality.py`** runs representative questions through the same planner + Guardian tool + RAG retrieval workflow and saves validation results as CSV and JSONL. The output records whether the planner chose the expected country, whether dates were valid, how many articles were fetched, how many sources were used, the average relevance score, and whether the case passed.
+
+Run a quick smoke test:
+
+```powershell
+cd 04_deployment/app
+python evaluate_ai_quality.py --max-cases 2
+```
+
+Run the full validation set:
+
+```powershell
+python evaluate_ai_quality.py
+```
+
+Results are written to **`validation_results/`** with timestamped filenames such as **`ai_validation_results_YYYYMMDD_HHMMSS.csv`**.
+
 ---
 
 ## Process diagrams
