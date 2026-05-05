@@ -14,23 +14,47 @@
     }
   },
   "files": {
-    "requirements.txt": {
-      "checksum": "4e2a1490766183a6c8c850c5c17a30aa"
-    },
     "README.md": {
-      "checksum": "e4e04aefecdee6540196847dfedbd28f"
+      "checksum": "d4baae07e83edf5e6c462886c907e994"
     },
     "agent_workflow.py": {
       "checksum": "7fe870ed43695156103ef715b86efbe3"
     },
     "app.py": {
-      "checksum": "51a7c959f939d2e2a685281cea61ff09"
+      "checksum": "d203601807f7d0c71c5530a9f053900c"
+    },
+    "evaluate_ai_quality.py": {
+      "checksum": "c401a329798c839b1f3e7642a1b53237"
     },
     "manifestme.sh": {
-      "checksum": "07b5def597660febf7226fa9873954f9"
+      "checksum": "44bc56a0fd3a1b0718d2305533edbe1a"
+    },
+    "prompt_validation_experiment.py": {
+      "checksum": "499119db986ea50a2686ad1c6e0d7804"
     },
     "rag_guardian.py": {
       "checksum": "bdc011009c6726c27f9b7eff9c8be66c"
+    },
+    "requirements.txt": {
+      "checksum": "6208801c3921dceaa8ea561ccaff6cbc"
+    },
+    "validated_reports/prompt_experiment_reports_20260504_223809.csv": {
+      "checksum": "84615a6991ac8963bf5fa5ff47bb9ad9"
+    },
+    "validated_reports/prompt_experiment_reports_20260504_223809.jsonl": {
+      "checksum": "06aa28e28004d6f520efd3ce458559a2"
+    },
+    "validation_results/prompt_experiment_summary_20260504_223809.md": {
+      "checksum": "09b3a7aa81c92cb0649a8b81850b7ab7"
+    },
+    "validation_results/prompt_validation_scores_20260504_223809.csv": {
+      "checksum": "c57c322075bd0888707ab38347538bba"
+    },
+    "validation_results/prompt_validation_scores_20260504_223809.jsonl": {
+      "checksum": "4120f005e632e39183a697de6857012e"
+    },
+    "validation_rubric.md": {
+      "checksum": "16e4ca95b94bd1f08f6b6593a48d84af"
     }
   }
 }

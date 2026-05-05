@@ -2,7 +2,7 @@
 
 Shiny app that analyzes **The Guardian Open Platform** API data: country coverage charts, an **Ollama Cloud** narrative report, and **Ask The Guardian** (multi-agent flow with **tool calling** and **RAG**). Full technical reference, diagrams, and usage are below.
 
-**Quick links for assignments:** [Process diagrams (Mermaid)](#process-diagrams) · [System architecture](#system-architecture) · [RAG and tools](#rag-and-tool-implementation) · [Technical details](#technical-details) · [Usage](#usage) · [Deployment](#deployment-posit-connect-or-similar)
+**Quick links for assignments:** [Custom validation homework](#custom-validation-homework) · [Process diagrams (Mermaid)](#process-diagrams) · [System architecture](#system-architecture) · [RAG and tools](#rag-and-tool-implementation) · [Technical details](#technical-details) · [Usage](#usage) · [Deployment](#deployment-posit-connect-or-similar)
 
 ---
 
@@ -10,13 +10,14 @@ Shiny app that analyzes **The Guardian Open Platform** API data: country coverag
 
 1. [What the app does and who it is for](#what-the-app-does-and-who-it-is-for)
 2. [Rubric mapping: production readiness and validation](https://github.com/vvnu0/sysen5381/blob/main/04_deployment/app/README.md#rubric-mapping-production-readiness-and-validation)
-3. [Process diagrams](#process-diagrams)
-4. [System architecture](#system-architecture)
-5. [RAG and tool implementation](#rag-and-tool-implementation)
-6. [Technical details](#technical-details)
-7. [Usage](#usage)
-8. [Deployment (Posit Connect or similar)](#deployment-posit-connect-or-similar)
-9. [Error handling and troubleshooting](#error-handling-and-troubleshooting)
+3. [Custom validation homework](#custom-validation-homework)
+4. [Process diagrams](#process-diagrams)
+5. [System architecture](#system-architecture)
+6. [RAG and tool implementation](#rag-and-tool-implementation)
+7. [Technical details](#technical-details)
+8. [Usage](#usage)
+9. [Deployment (Posit Connect or similar)](#deployment-posit-connect-or-similar)
+10. [Error handling and troubleshooting](#error-handling-and-troubleshooting)
 
 ---
 
@@ -108,6 +109,97 @@ python evaluate_ai_quality.py
 ```
 
 Results are written to **`validation_results/`** with timestamped filenames such as **`ai_validation_results_YYYYMMDD_HHMMSS.csv`**.
+
+---
+
+## Custom validation homework
+
+This app now includes a complete validation experiment for the `09_text_analysis` homework. The system validates AI-generated Guardian coverage reports with a custom qualitative content-analysis rubric and then compares Prompt A, Prompt B, and Prompt C statistically.
+
+### Submission links
+
+- **Validation system script:** [`prompt_validation_experiment.py`](prompt_validation_experiment.py)
+- **Validation criteria / rubric:** [`validation_rubric.md`](validation_rubric.md)
+- **Example AI-reviewed validation results:** [`validation_results/prompt_experiment_summary_20260504_223809.md`](validation_results/prompt_experiment_summary_20260504_223809.md)
+- **AI-reviewed validation score data:** [`validation_results/prompt_validation_scores_20260504_223809.csv`](validation_results/prompt_validation_scores_20260504_223809.csv)
+- **Reports validated:** [`validated_reports/prompt_experiment_reports_20260504_223809.csv`](validated_reports/prompt_experiment_reports_20260504_223809.csv)
+
+### Validation criteria table
+
+| Dimension | Description | Scale / measurement method | Benchmark |
+|---|---|---|---|
+| Numeric Grounding | Checks whether report numbers match the dashboard benchmark facts. | 0-25 weighted points, with penalties for wrong or unsupported numbers. | 20+ and no major contradiction. |
+| Comparative Reasoning | Checks raw-volume vs per-capita comparison and top/bottom country contrast. | 0-20 weighted content-analysis tags. | 15+ and at least one raw-vs-per-capita comparison. |
+| Source Scope Control | Checks whether the report names Guardian, date window, and country scope. | 0-15 weighted tags. | 12+ and explicit Guardian mention. |
+| Editorial Usefulness | Checks whether the report gives practical next steps for editors or researchers. | 0-20 weighted tags. | 15+ and at least one concrete action. |
+| Risk Control | Checks whether the report avoids unsupported causal claims and sensational wording. | 0-20 penalty-based score with caveat credit. | 16+ and no severe unsupported claim. |
+
+This differs from the LAB's generic Likert scales because it uses this app's own facts, a 0-100 weighted scoring system, benchmark thresholds, and explicit content-analysis tags such as `per_capita_comparison`, `editorial_action`, and `guardian_source`.
+
+### Experimental design
+
+The experiment compares three prompt styles for the same Guardian dashboard benchmark:
+
+- **Prompt A:** Evidence-first newsroom brief with exact numbers, scope, caveat, and editorial action.
+- **Prompt B:** Concise executive summary with fewer required details.
+- **Prompt C:** Narrative opinion style that invites broader interpretation.
+
+The included AI-reviewed run collected **12 reports per prompt** for **36 total validated reports** using fixture report generation and the live **AI reviewer**. The script saves the generated report text separately from the validation scores so the scoring evidence can be audited. A no-key heuristic mode is also available for reproducible classroom demos.
+
+### Statistical analysis
+
+The hypothesis was: **Prompt A will have a higher mean custom validation score than Prompt B/C** because it is explicitly designed around this app's validation rubric. The example run found:
+
+- Prompt A mean score: **90.83**
+- Prompt B mean score: **44.75**
+- Prompt C mean score: **0.42**
+- Welch t-test, Prompt A vs Prompt B: **p = 3.381e-11**
+- One-way ANOVA across A/B/C: **p = 1.941e-27**
+
+Interpretation: Prompt A performed significantly better on the custom validation framework. The result supports the idea that a prompt aligned with the use-case-specific rubric produces reports that are more grounded, scoped, useful, and lower-risk.
+
+### System design
+
+[`prompt_validation_experiment.py`](prompt_validation_experiment.py) has four stages:
+
+1. Generate reports from Prompt A/B/C using either fixture mode or live Ollama Cloud mode.
+2. Validate each report against [`validation_rubric.md`](validation_rubric.md).
+3. Save reports to `validated_reports/` and scores to `validation_results/`.
+4. Run Welch t-test and ANOVA with `scipy`.
+
+The AI reviewer role is used in live validation mode: Ollama Cloud reads the source benchmark, the custom rubric, and the generated report, then returns structured JSON scores. The script also includes a deterministic heuristic reviewer for reproducible classroom demos when API keys are unavailable.
+
+### Technical details
+
+- **Main script:** [`prompt_validation_experiment.py`](prompt_validation_experiment.py)
+- **Rubric:** [`validation_rubric.md`](validation_rubric.md)
+- **Inputs:** built-in Guardian dashboard benchmark facts from the Geographic Attention Reporter use case.
+- **Outputs:** timestamped CSV, JSONL, and Markdown files in `validated_reports/` and `validation_results/`.
+- **Packages:** `pandas`, `requests`, `python-dotenv`, and `scipy`.
+- **Optional API key:** `OLLAMA_API_KEY` in repo-root `.env` for live generation and live AI review.
+
+### Usage instructions
+
+From `04_deployment/app`:
+
+```bash
+pip install -r requirements.txt
+python prompt_validation_experiment.py --samples-per-prompt 12 --generation-mode fixtures --reviewer-mode ai
+```
+
+To also generate the reports live with Ollama Cloud:
+
+```bash
+python prompt_validation_experiment.py --samples-per-prompt 12 --generation-mode live --reviewer-mode ai
+```
+
+For a reproducible no-key demo, use:
+
+```bash
+python prompt_validation_experiment.py --samples-per-prompt 12 --generation-mode fixtures --reviewer-mode heuristic
+```
+
+Use the AI commands when `OLLAMA_API_KEY` is configured and you want the AI reviewer to perform the qualitative content analysis directly.
 
 ---
 
