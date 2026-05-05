@@ -3,12 +3,16 @@
 ## Experiment Design
 
 - Prompts compared: A, B, C
-- Samples per prompt: 12
-- Total reports validated: 36
+- Date window: 2026-03-01 to 2026-05-05
+- Samples per prompt: 50
+- Total reports validated: 150
 - Generation mode: fixtures
 - Reviewer mode: heuristic
-- Reports file: `validated_reports\prompt_experiment_reports_20260505_135637.csv`
-- Scores file: `validation_results\prompt_validation_scores_20260505_135637.csv`
+- Reports file: `validated_reports\prompt_experiment_reports_20260505_142038.csv`
+- Scores file: `validation_results\prompt_validation_scores_20260505_142038.csv`
+- Summary statistics file: `validation_results\prompt_score_summary_20260505_142038.csv`
+- Score comparison chart: `validation_results\prompt_score_boxplot_20260505_142038.html`
+- Example evaluated report: `validation_results\example_evaluated_report_20260505_142038.md`
 
 ## Prompt Variants
 
@@ -24,21 +28,21 @@ The custom rubric uses weighted 0-100 scoring across Numeric Grounding, Comparat
 
 | prompt_id   |   count |   mean |   std |   min |   max |
 |:------------|--------:|-------:|------:|------:|------:|
-| A           |      12 |  89.67 |  6.4  |    81 |    94 |
-| B           |      12 |  50    |  6.27 |    44 |    56 |
-| C           |      12 |  11    |  3.13 |     8 |    14 |
+| A           |      50 |  89.58 |  6.22 |    81 |    94 |
+| B           |      50 |  50    |  6.06 |    44 |    56 |
+| C           |      50 |  11    |  3.03 |     8 |    14 |
 
 ## Statistical Analysis
 
 - Hypothesis: H1: Prompt A has a higher mean custom validation score than Prompt B. H0: their mean scores are equal.
-- Welch t-test: t = 15.340, p = 3.153e-13
-- Mean difference (A - B): 39.67
-- Cohen's d: 6.26
-- One-way ANOVA: F = 618.443, p = 6.972e-27
+- Welch t-test: t = 32.224, p = 6.248e-54
+- Mean difference (A - B): 39.58
+- Cohen's d: 6.44
+- One-way ANOVA: F = 2736.599, p = 4.910e-117
 
 ## Interpretation
 
-Prompt A performed significantly better than Prompt B (Welch t-test p = 3.153e-13). The ANOVA p-value was 6.972e-27, showing that prompt choice affected validation scores overall.
+Prompt A performed significantly better than Prompt B (Welch t-test p = 6.248e-54). The ANOVA p-value was 4.910e-117, showing that prompt choice affected validation scores overall.
 
 ## System Design
 

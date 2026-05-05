@@ -12,12 +12,12 @@ Unlike the generic Likert-scale lab rubric, this framework uses:
 
 ## Benchmark Facts
 
-The experiment uses a fixed benchmark so every prompt is evaluated against the same facts.
+The experiment uses the same benchmark facts for every prompt so the comparison is fair. The **date window is supplied at runtime** with `--from-date` and `--to-date`; the example below uses March 1, 2026 to May 5, 2026.
 
 | Fact | Benchmark |
 |---|---|
 | Source | The Guardian Open Platform |
-| Date window | 2026-04-01 to 2026-04-30 |
+| Date window | User supplied, e.g. `2026-03-01 to 2026-05-05` |
 | Countries analyzed | United Kingdom, United States, India, Brazil, Japan |
 | Total reports/articles | 240 |
 | Average per country | 48 |

@@ -121,9 +121,11 @@ This app now includes a complete validation experiment for the `09_text_analysis
 - **Brief validation documentation:** [`VALIDATION_SYSTEM_DOCUMENTATION.md`](VALIDATION_SYSTEM_DOCUMENTATION.md)
 - **Validation system script:** [`prompt_validation_experiment.py`](prompt_validation_experiment.py)
 - **Validation criteria / rubric:** [`validation_rubric.md`](validation_rubric.md)
-- **Example validation results:** [`validation_results/prompt_experiment_summary_20260505_005644.md`](validation_results/prompt_experiment_summary_20260505_005644.md)
-- **Validation score data:** [`validation_results/prompt_validation_scores_20260505_005644.csv`](validation_results/prompt_validation_scores_20260505_005644.csv)
-- **Reports validated:** [`validated_reports/prompt_experiment_reports_20260505_005644.csv`](validated_reports/prompt_experiment_reports_20260505_005644.csv)
+- **Example validation results:** [`validation_results/prompt_experiment_summary_20260505_141322.md`](validation_results/prompt_experiment_summary_20260505_141322.md)
+- **Validation score data:** [`validation_results/prompt_validation_scores_20260505_141322.csv`](validation_results/prompt_validation_scores_20260505_141322.csv)
+- **Prompt score comparison:** [`validation_results/prompt_score_boxplot_20260505_141322.html`](validation_results/prompt_score_boxplot_20260505_141322.html)
+- **Example evaluated report:** [`validation_results/example_evaluated_report_20260505_141322.md`](validation_results/example_evaluated_report_20260505_141322.md)
+- **Reports validated:** [`validated_reports/prompt_experiment_reports_20260505_141322.csv`](validated_reports/prompt_experiment_reports_20260505_141322.csv)
 
 ### Validation criteria table
 
@@ -145,7 +147,7 @@ The experiment compares three prompt styles for the same Guardian dashboard benc
 - **Prompt B:** Concise executive summary with fewer required details.
 - **Prompt C:** Narrative opinion style that invites broader interpretation.
 
-The included reproducible run collected **12 reports per prompt** for **36 total validated reports** using fixture report generation and the custom rubric reviewer. The script saves the generated report text separately from the validation scores so the scoring evidence can be audited. AI reviewer mode is available when `OLLAMA_API_KEY` is configured.
+The included reproducible run used the date window **2026-03-01 to 2026-05-05** and collected **12 reports per prompt** for **36 total validated reports** using fixture report generation and the custom rubric reviewer. The script saves the generated report text separately from the validation scores so the scoring evidence can be audited. AI reviewer mode is available when `OLLAMA_API_KEY` is configured.
 
 ### Statistical analysis
 
@@ -185,19 +187,19 @@ From `04_deployment/app`:
 
 ```bash
 pip install -r requirements.txt
-python prompt_validation_experiment.py --samples-per-prompt 12 --generation-mode fixtures --reviewer-mode ai
+python prompt_validation_experiment.py --from-date 2026-03-01 --to-date 2026-05-05 --samples-per-prompt 12 --generation-mode fixtures --reviewer-mode ai
 ```
 
 To also generate the reports live with Ollama Cloud:
 
 ```bash
-python prompt_validation_experiment.py --samples-per-prompt 12 --generation-mode live --reviewer-mode ai
+python prompt_validation_experiment.py --from-date 2026-03-01 --to-date 2026-05-05 --samples-per-prompt 12 --generation-mode live --reviewer-mode ai
 ```
 
 For a reproducible no-key demo, use:
 
 ```bash
-python prompt_validation_experiment.py --samples-per-prompt 12 --generation-mode fixtures --reviewer-mode heuristic
+python prompt_validation_experiment.py --from-date 2026-03-01 --to-date 2026-05-05 --samples-per-prompt 12 --generation-mode fixtures --reviewer-mode heuristic
 ```
 
 Use the AI commands when `OLLAMA_API_KEY` is configured and you want the AI reviewer to perform the qualitative content analysis directly.

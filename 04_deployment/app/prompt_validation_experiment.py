@@ -23,6 +23,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import requests
 from dotenv import load_dotenv
 from scipy import stats
@@ -55,6 +56,8 @@ RUBRIC_PATH = APP_DIR / "validation_rubric.md"
 # for every prompt keeps the experiment fair: only the prompt changes.
 BENCHMARK = {
     "source": "The Guardian Open Platform",
+    "from_date": "2026-04-01",
+    "to_date": "2026-04-30",
     "date_window": "2026-04-01 to 2026-04-30",
     "countries": ["United Kingdom", "United States", "India", "Brazil", "Japan"],
     "total_articles": 240,
@@ -113,6 +116,25 @@ def print_step(title):
     print("-" * 72)
 
 
+def parse_date(date_text):
+    """Validate one command-line date as YYYY-MM-DD."""
+    try:
+        return datetime.strptime(date_text, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"{date_text!r} must use YYYY-MM-DD format, e.g. 2026-03-01."
+        ) from exc
+
+
+def set_benchmark_dates(from_date, to_date):
+    """Update the benchmark date window from command-line inputs."""
+    if from_date > to_date:
+        raise ValueError("--from-date must be on or before --to-date.")
+    BENCHMARK["from_date"] = from_date.isoformat()
+    BENCHMARK["to_date"] = to_date.isoformat()
+    BENCHMARK["date_window"] = f"{from_date.isoformat()} to {to_date.isoformat()}"
+
+
 # 2. Report Generation ############################
 
 def benchmark_text():
@@ -153,11 +175,12 @@ Keep the report under 220 words.
 
 def fixture_report(prompt_id, trial):
     """Generate deterministic report text for no-key classroom runs."""
+    date_window = BENCHMARK["date_window"]
     if prompt_id == "A":
         templates = [
             (
                 "## Guardian Coverage Brief\n\n"
-                "From 2026-04-01 to 2026-04-30, The Guardian dashboard tracked 240 articles "
+                f"From {date_window}, The Guardian dashboard tracked 240 articles "
                 "across the United Kingdom, United States, India, Brazil, and Japan. The United "
                 "Kingdom led raw coverage with 90 articles, while Japan had 18, a 5.0x gap. "
                 "The per-capita view also ranked the United Kingdom highest at 1.32 articles "
@@ -166,7 +189,7 @@ def fixture_report(prompt_id, trial):
                 "need planned follow-up, while noting that article counts measure attention, not impact."
             ),
             (
-                "The Guardian Open Platform results for 2026-04-01 to 2026-04-30 show 240 articles "
+                f"The Guardian Open Platform results for {date_window} show 240 articles "
                 "for five countries: United Kingdom, United States, India, Brazil, and Japan. Raw "
                 "coverage was concentrated in the United Kingdom with 90 articles; Japan had 18. "
                 "On population-adjusted coverage, the United Kingdom remained highest at 1.32 per "
@@ -175,7 +198,7 @@ def fixture_report(prompt_id, trial):
                 "to assign editors to inspect coverage gaps and compare topic balance by country."
             ),
             (
-                "For 2026-04-01 to 2026-04-30, The Guardian Open Platform dashboard counted "
+                f"For {date_window}, The Guardian Open Platform dashboard counted "
                 "240 articles across the United Kingdom, United States, India, Brazil, and Japan. "
                 "The United Kingdom received 90 articles and Japan received 18, creating a 5.0x "
                 "raw coverage gap. Politics and crisis coverage dominated the topic pattern. "
@@ -188,9 +211,10 @@ def fixture_report(prompt_id, trial):
     if prompt_id == "B":
         templates = [
             (
-                "The Guardian coverage summary shows uneven attention across countries. In April "
-                "2026, the dashboard found 240 articles, with the United Kingdom receiving the most "
-                "coverage. This suggests editors may want to examine geographic balance in future work."
+                "The Guardian coverage summary shows uneven attention across countries. For "
+                f"{date_window}, the dashboard found 240 articles, with the United Kingdom "
+                "receiving the most coverage. This suggests editors may want to examine geographic "
+                "balance in future work."
             ),
             (
                 "Coverage was not evenly distributed. The United Kingdom had 90 Guardian articles, "
@@ -304,7 +328,12 @@ def heuristic_validate(report_text):
     source_scope_control = 0
     if has_any(text, ["guardian", "open platform"]):
         source_scope_control += 5
-    if has_any(text, ["2026-04-01", "2026-04-30", "april 2026"]):
+    date_terms = [
+        BENCHMARK["from_date"],
+        BENCHMARK["to_date"],
+        BENCHMARK["date_window"].lower(),
+    ]
+    if has_any(text, date_terms):
         source_scope_control += 5
     country_hits = sum(country.lower() in text for country in BENCHMARK["countries"])
     source_scope_control += min(country_hits, 5)
@@ -472,6 +501,24 @@ def write_jsonl(path, rows):
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def write_boxplot(scores_df, output_path):
+    """Save an interactive score comparison chart for screenshots."""
+    fig = px.box(
+        scores_df,
+        x="prompt_id",
+        y="overall_score",
+        color="prompt_id",
+        points="all",
+        title=f"Prompt Validation Scores ({BENCHMARK['date_window']})",
+        labels={
+            "prompt_id": "Prompt",
+            "overall_score": "Custom validation score (0-100)",
+        },
+    )
+    fig.update_layout(showlegend=False)
+    fig.write_html(output_path)
+
+
 def write_outputs(reports, scores, stats_out, reviewer_mode, generation_mode):
     """Write reports, scores, and markdown summary artifacts."""
     VALIDATION_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -482,6 +529,9 @@ def write_outputs(reports, scores, stats_out, reviewer_mode, generation_mode):
     reports_jsonl = VALIDATED_REPORTS_DIR / f"prompt_experiment_reports_{stamp}.jsonl"
     scores_csv = VALIDATION_RESULTS_DIR / f"prompt_validation_scores_{stamp}.csv"
     scores_jsonl = VALIDATION_RESULTS_DIR / f"prompt_validation_scores_{stamp}.jsonl"
+    summary_csv = VALIDATION_RESULTS_DIR / f"prompt_score_summary_{stamp}.csv"
+    boxplot_html = VALIDATION_RESULTS_DIR / f"prompt_score_boxplot_{stamp}.html"
+    example_md = VALIDATION_RESULTS_DIR / f"example_evaluated_report_{stamp}.md"
     summary_md = VALIDATION_RESULTS_DIR / f"prompt_experiment_summary_{stamp}.md"
 
     pd.DataFrame(reports).to_csv(reports_csv, index=False, quoting=csv.QUOTE_MINIMAL)
@@ -496,6 +546,41 @@ def write_outputs(reports, scores, stats_out, reviewer_mode, generation_mode):
         .round(2)
         .reset_index()
     )
+    summary.to_csv(summary_csv, index=False)
+    write_boxplot(scores_df, boxplot_html)
+
+    report_lookup = {row["report_id"]: row for row in reports}
+    example_score = scores[0] if scores else {}
+    example_report = report_lookup.get(example_score.get("report_id"), {})
+    example_lines = [
+        "# Example Evaluated Report",
+        "",
+        f"- Report ID: `{example_score.get('report_id', '')}`",
+        f"- Prompt: `{example_score.get('prompt_id', '')}` - {example_score.get('prompt_name', '')}",
+        f"- Date window: {BENCHMARK['date_window']}",
+        f"- Reviewer mode: {reviewer_mode}",
+        "",
+        "## Generated Report",
+        "",
+        example_report.get("report_text", ""),
+        "",
+        "## Validation Scores",
+        "",
+        f"- Numeric Grounding: {example_score.get('numeric_grounding', '')} / 25",
+        f"- Comparative Reasoning: {example_score.get('comparative_reasoning', '')} / 20",
+        f"- Source Scope Control: {example_score.get('source_scope_control', '')} / 15",
+        f"- Editorial Usefulness: {example_score.get('editorial_usefulness', '')} / 20",
+        f"- Risk Control: {example_score.get('risk_control', '')} / 20",
+        f"- Overall Score: {example_score.get('overall_score', '')} / 100",
+        f"- Recommendation: {example_score.get('recommendation', '')}",
+        f"- Content Tags: `{example_score.get('content_tags', '')}`",
+        "",
+        "## Reviewer Notes",
+        "",
+        f"- Strength: {example_score.get('strength', '')}",
+        f"- Weakness: {example_score.get('weakness', '')}",
+    ]
+    example_md.write_text("\n".join(example_lines) + "\n", encoding="utf-8")
 
     lines = [
         "# Prompt Validation Experiment Results",
@@ -503,12 +588,16 @@ def write_outputs(reports, scores, stats_out, reviewer_mode, generation_mode):
         "## Experiment Design",
         "",
         "- Prompts compared: A, B, C",
+        f"- Date window: {BENCHMARK['date_window']}",
         f"- Samples per prompt: {int(summary['count'].iloc[0]) if not summary.empty else 0}",
         f"- Total reports validated: {len(scores_df)}",
         f"- Generation mode: {generation_mode}",
         f"- Reviewer mode: {reviewer_mode}",
         f"- Reports file: `{reports_csv.relative_to(APP_DIR)}`",
         f"- Scores file: `{scores_csv.relative_to(APP_DIR)}`",
+        f"- Summary statistics file: `{summary_csv.relative_to(APP_DIR)}`",
+        f"- Score comparison chart: `{boxplot_html.relative_to(APP_DIR)}`",
+        f"- Example evaluated report: `{example_md.relative_to(APP_DIR)}`",
         "",
         "## Prompt Variants",
         "",
@@ -569,6 +658,9 @@ def write_outputs(reports, scores, stats_out, reviewer_mode, generation_mode):
         "reports_jsonl": reports_jsonl,
         "scores_csv": scores_csv,
         "scores_jsonl": scores_jsonl,
+        "summary_csv": summary_csv,
+        "boxplot_html": boxplot_html,
+        "example_md": example_md,
         "summary_md": summary_md,
         "summary": summary,
     }
@@ -579,13 +671,22 @@ def write_outputs(reports, scores, stats_out, reviewer_mode, generation_mode):
 def main():
     """Run the full prompt validation experiment."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("--from-date", type=parse_date, default=parse_date("2026-04-01"))
+    parser.add_argument("--to-date", type=parse_date, default=parse_date("2026-04-30"))
     parser.add_argument("--samples-per-prompt", type=int, default=12)
     parser.add_argument("--generation-mode", choices=["fixtures", "live"], default="fixtures")
     parser.add_argument("--reviewer-mode", choices=["heuristic", "ai"], default="heuristic")
     parser.add_argument("--sleep-seconds", type=float, default=0.3)
     args = parser.parse_args()
 
+    try:
+        set_benchmark_dates(args.from_date, args.to_date)
+    except ValueError as exc:
+        print(f"❌ {exc}")
+        sys.exit(1)
+
     print_rule("📋 Custom AI Report Validation Experiment")
+    print(f"✅ Date window: {BENCHMARK['date_window']}")
     print(f"✅ Prompts: {', '.join(PROMPTS.keys())}")
     print(f"✅ Samples per prompt: {args.samples_per_prompt}")
     print(f"✅ Generation mode: {args.generation_mode}")
@@ -612,6 +713,9 @@ def main():
                 "prompt_id": prompt_id,
                 "prompt_name": PROMPTS[prompt_id]["name"],
                 "trial": trial,
+                "from_date": BENCHMARK["from_date"],
+                "to_date": BENCHMARK["to_date"],
+                "date_window": BENCHMARK["date_window"],
                 "report_text": report_text,
                 "generation_mode": args.generation_mode,
             })
@@ -620,6 +724,9 @@ def main():
                 "prompt_id": prompt_id,
                 "prompt_name": PROMPTS[prompt_id]["name"],
                 "trial": trial,
+                "from_date": BENCHMARK["from_date"],
+                "to_date": BENCHMARK["to_date"],
+                "date_window": BENCHMARK["date_window"],
                 **review,
                 "reviewer_mode": args.reviewer_mode,
             })
