@@ -118,11 +118,12 @@ This app now includes a complete validation experiment for the `09_text_analysis
 
 ### Submission links
 
+- **Brief validation documentation:** [`VALIDATION_SYSTEM_DOCUMENTATION.md`](VALIDATION_SYSTEM_DOCUMENTATION.md)
 - **Validation system script:** [`prompt_validation_experiment.py`](prompt_validation_experiment.py)
 - **Validation criteria / rubric:** [`validation_rubric.md`](validation_rubric.md)
-- **Example AI-reviewed validation results:** [`validation_results/prompt_experiment_summary_20260504_223809.md`](validation_results/prompt_experiment_summary_20260504_223809.md)
-- **AI-reviewed validation score data:** [`validation_results/prompt_validation_scores_20260504_223809.csv`](validation_results/prompt_validation_scores_20260504_223809.csv)
-- **Reports validated:** [`validated_reports/prompt_experiment_reports_20260504_223809.csv`](validated_reports/prompt_experiment_reports_20260504_223809.csv)
+- **Example validation results:** [`validation_results/prompt_experiment_summary_20260505_005644.md`](validation_results/prompt_experiment_summary_20260505_005644.md)
+- **Validation score data:** [`validation_results/prompt_validation_scores_20260505_005644.csv`](validation_results/prompt_validation_scores_20260505_005644.csv)
+- **Reports validated:** [`validated_reports/prompt_experiment_reports_20260505_005644.csv`](validated_reports/prompt_experiment_reports_20260505_005644.csv)
 
 ### Validation criteria table
 
@@ -144,17 +145,17 @@ The experiment compares three prompt styles for the same Guardian dashboard benc
 - **Prompt B:** Concise executive summary with fewer required details.
 - **Prompt C:** Narrative opinion style that invites broader interpretation.
 
-The included AI-reviewed run collected **12 reports per prompt** for **36 total validated reports** using fixture report generation and the live **AI reviewer**. The script saves the generated report text separately from the validation scores so the scoring evidence can be audited. A no-key heuristic mode is also available for reproducible classroom demos.
+The included reproducible run collected **12 reports per prompt** for **36 total validated reports** using fixture report generation and the custom rubric reviewer. The script saves the generated report text separately from the validation scores so the scoring evidence can be audited. AI reviewer mode is available when `OLLAMA_API_KEY` is configured.
 
 ### Statistical analysis
 
 The hypothesis was: **Prompt A will have a higher mean custom validation score than Prompt B/C** because it is explicitly designed around this app's validation rubric. The example run found:
 
-- Prompt A mean score: **90.83**
-- Prompt B mean score: **44.75**
-- Prompt C mean score: **0.42**
-- Welch t-test, Prompt A vs Prompt B: **p = 3.381e-11**
-- One-way ANOVA across A/B/C: **p = 1.941e-27**
+- Prompt A mean score: **89.67**
+- Prompt B mean score: **50.00**
+- Prompt C mean score: **11.00**
+- Welch t-test, Prompt A vs Prompt B: **p = 3.153e-13**
+- One-way ANOVA across A/B/C: **p = 6.972e-27**
 
 Interpretation: Prompt A performed significantly better on the custom validation framework. The result supports the idea that a prompt aligned with the use-case-specific rubric produces reports that are more grounded, scoped, useful, and lower-risk.
 

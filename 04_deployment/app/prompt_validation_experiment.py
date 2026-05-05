@@ -1,7 +1,6 @@
 # prompt_validation_experiment.py
 # Custom Prompt Validation Experiment
 # Pairs with app.py and validation_rubric.md
-# Tim Fraser
 
 # This script validates AI-generated Guardian coverage reports with a custom
 # qualitative content-analysis framework. It generates reports from Prompt A,
